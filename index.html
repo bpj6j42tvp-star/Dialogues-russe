@@ -77,7 +77,7 @@ video#result{width:100%;max-width:380px;display:none;margin:12px auto 0;border-r
 #qc{display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
 #qc ul{list-style:none;padding:0;margin:8px 0;font-size:14px}
 #qc li{padding:3px 0}
-#qc .frames{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+#qc .frames{display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;margin-top:8px}
 #qc figure{margin:0}#qc img{width:100%;border-radius:8px;border:1px solid var(--line);display:block}
 #qc figcaption{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.3}
 .foot{color:var(--muted);font-size:12px;text-align:center;margin-top:8px}
@@ -114,8 +114,17 @@ video#result{width:100%;max-width:380px;display:none;margin:12px auto 0;border-r
     <p class="hint">La clé ne sert qu'à appeler Azure, directement depuis cet appareil. Elle n'est envoyée nulle part ailleurs. <span id="usage"></span></p>
   </section>
 
-  <!-- 2. Dialogue -->
+  <!-- Modèle -->
   <section class="card">
+    <h2><span class="n">◆</span>Modèle de vidéo</h2>
+    <select id="mode">
+      <option value="dialogue">Dialogue (deux voix, texte + traduction)</option>
+      <option value="lecture">« Tu sais lire ça ? » (mots à lire, compte à rebours)</option>
+    </select>
+  </section>
+
+  <!-- 2. Dialogue -->
+  <section class="card" id="secDialogue">
     <h2><span class="n">2</span>Dialogue</h2>
     <label for="examples">Exemples</label>
     <select id="examples"><option value="">— Choisir un exemple —</option></select>
@@ -134,6 +143,21 @@ video#result{width:100%;max-width:380px;display:none;margin:12px auto 0;border-r
     <div id="linesInfo" class="lines-info"></div>
   </section>
 
+  <!-- 2 bis. Tu sais lire ça ? -->
+  <section class="card" id="secLecture" style="display:none">
+    <h2><span class="n">2</span>Mots de l'épisode</h2>
+    <div class="row3">
+      <div><label for="readEpisode">Épisode n°</label><input id="readEpisode" type="text" value="1"></div>
+      <div><label for="readVoice">Voix qui lit les mots</label>
+        <select id="readVoice"><option value="F">Voix F</option><option value="M">Voix M</option></select></div>
+      <div><label>&nbsp;</label><button id="btnEpisode1" class="small" type="button" style="width:100%">Recharger l'épisode 1</button></div>
+    </div>
+    <label for="readData">Liste des mots (JSON) : accent aigu après la voyelle accentuée, lettre muette entre crochets</label>
+    <textarea id="readData" spellcheck="false" style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px"></textarea>
+    <label class="check"><input id="readTick" type="checkbox" checked> « Tic » discret à chaque chiffre du compte à rebours</label>
+    <div id="readInfo" class="lines-info"></div>
+  </section>
+
   <!-- 3. Voix -->
   <section class="card">
     <h2><span class="n">3</span>Voix et rythme</h2>
@@ -144,8 +168,8 @@ video#result{width:100%;max-width:380px;display:none;margin:12px auto 0;border-r
     </div>
     <label for="rate">Débit de la voix</label>
     <div class="range"><input id="rate" type="range" min="-50" max="20" step="5" value="-15"><output id="rateOut">-15 %</output></div>
-    <label for="pause">Pause entre les répliques</label>
-    <div class="range"><input id="pause" type="range" min="0.2" max="3" step="0.1" value="0.8"><output id="pauseOut">0,8 s</output></div>
+    <div id="pauseRow"><label for="pause">Pause entre les répliques</label>
+    <div class="range"><input id="pause" type="range" min="0.2" max="3" step="0.1" value="0.8"><output id="pauseOut">0,8 s</output></div></div>
     <div class="row">
       <div><label for="level">Niveau</label><input id="level" type="text" value="A1"></div>
       <div><label for="engine">Connexion Azure</label>
@@ -164,7 +188,7 @@ video#result{width:100%;max-width:380px;display:none;margin:12px auto 0;border-r
       <div><label for="handle">Nom du compte</label><input id="handle" type="text" value="L'Est en 60 secondes"></div>
       <div><label for="endText">Texte de fin</label><input id="endText" type="text" value="Abonne-toi pour d'autres dialogues !"></div>
     </div>
-    <label class="check"><input id="showPrev" type="checkbox" checked> Afficher la réplique précédente en transparence</label>
+    <label class="check" id="showPrevRow"><input id="showPrev" type="checkbox" checked> Afficher la réplique précédente en transparence</label>
     <p class="hint">Charte : fond crème #F3ECE1, texte #1C1A18, rouge #A01D22. Marges de sécurité TikTok respectées (200 px en haut, 90 px sur les côtés, 300 px en bas).</p>
   </section>
 </main>
@@ -222,9 +246,9 @@ const Store = {
 
 /* ---------- Langues et voix (facile à étendre) ---------- */
 const LANGS = {
-  'ru-RU': { label: 'Russe', thanks: 'Спаси́бо!', voices: { M: ['ru-RU-DmitryNeural'], F: ['ru-RU-SvetlanaNeural', 'ru-RU-DariyaNeural'] } },
-  'ka-GE': { label: 'Géorgien (test)', thanks: 'მადლობა!', voices: { M: ['ka-GE-GiorgiNeural'], F: ['ka-GE-EkaNeural'] } },
-  'sr-RS': { label: 'Serbe (test)', thanks: 'Хвала!', voices: { M: ['sr-RS-NicholasNeural'], F: ['sr-RS-SophieNeural'] } },
+  'ru-RU': { label: 'Russe', adj: 'russes', thanks: 'Спаси́бо!', voices: { M: ['ru-RU-DmitryNeural'], F: ['ru-RU-SvetlanaNeural', 'ru-RU-DariyaNeural'] } },
+  'ka-GE': { label: 'Géorgien (test)', adj: 'géorgiens', thanks: 'მადლობა!', voices: { M: ['ka-GE-GiorgiNeural'], F: ['ka-GE-EkaNeural'] } },
+  'sr-RS': { label: 'Serbe (test)', adj: 'serbes', thanks: 'Хвала!', voices: { M: ['sr-RS-NicholasNeural'], F: ['sr-RS-SophieNeural'] } },
 };
 
 /* ---------- Exemples (accent tonique marqué par un accent aigu) ---------- */
@@ -286,14 +310,21 @@ const Stress = {
     let s = (src || '').normalize('NFC').replace(/\s+/g, ' ').trim();
     // voyelle latine accentuée tapée par erreur au milieu d'un mot cyrillique → voyelle cyrillique + accent
     s = s.replace(/[áéóýÁÉÓÝ]/g, (c, i) => this.CYR.test((s[i - 1] || '') + (s[i + 1] || '')) ? this.LAT[c] + this.ACUTE : c);
-    let text = ''; const marks = new Set();
+    // [В] = lettre muette : on retire les crochets et on garde la position.
+    let text = '', inBr = false; const marks = new Set(), silent = new Set();
     for (const ch of s) {
-      if (ch === this.ACUTE || ch === '´') { if (text) marks.add(text.length - 1); }
-      else text += ch;
+      if (ch === '[') { inBr = true; continue; }
+      if (ch === ']') { inBr = false; continue; }
+      if (ch === this.ACUTE || ch === '´') { if (text) marks.add(text.length - 1); continue; }
+      if (inBr) silent.add(text.length);
+      text += ch;
     }
-    return { text, marks };
+    return { text, marks, silent };
   },
   strip(s) { return this.parse(s).text; },
+  VOWELS: /[аеёиоуыэюя]/gi,
+  // Mot de plusieurs syllabes sans accent marqué (ё est toujours accentué) ?
+  missingStress(rich) { return rich.marks.size === 0 && !/[ёЁ]/.test(rich.text) && (rich.text.match(this.VOWELS) || []).length >= 2; },
 };
 
 /* ---------- Parsing du dialogue ---------- */
@@ -582,7 +613,20 @@ const Timeline = {
       if (off >= out.length) continue;
       out.set(it.samples.subarray(0, Math.max(0, out.length - off)), off);
     }
+    if (tl.ticks && tl.ticks.length) {
+      const tk = this.tickSound(sr);
+      for (const tt of tl.ticks) {
+        const off = Math.round((tt - from) * sr);
+        for (let j = 0; j < tk.length; j++) { const q = off + j; if (q >= 0 && q < out.length) out[q] += tk[j]; }
+      }
+    }
     return out;
+  },
+  // « Tic » discret de 35 ms (deux sinusoïdes amorties), généré sans fichier.
+  tickSound(sr) {
+    const n = Math.round(0.035 * sr), a = new Float32Array(n);
+    for (let i = 0; i < n; i++) { const t = i / sr; a[i] = 0.16 * Math.sin(2 * Math.PI * 2000 * t) * Math.exp(-t * 130) + 0.07 * Math.sin(2 * Math.PI * 1000 * t) * Math.exp(-t * 90); }
+    return a;
   },
   // Réplique attendue à l'instant t (pour le contrôle qualité)
   lineAt(tl, t) {
@@ -634,25 +678,29 @@ class VideoRenderer {
   }
   // Dessine une ligne avec les voyelles accentuées en rouge.
   drawRich(line, marks, x, y, color, align = 'left') {
-    const g = this.g, s = line.s;
+    return this.drawColored(line.s, x, y, i => marks.has(line.start + i) ? C.accent : color, align);
+  }
+  // Dessine un texte dont chaque lettre peut avoir sa couleur (colorAt(i) → couleur).
+  drawColored(s, x, y, colorAt, align = 'left') {
+    const g = this.g;
     g.textAlign = 'left';
     const total = g.measureText(s).width;
     const x0 = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
     let a = 0;
     while (a < s.length) {
-      const on = marks.has(line.start + a); let b = a + 1;
-      while (b < s.length && marks.has(line.start + b) === on) b++;
-      g.fillStyle = on ? C.accent : color;
+      const c = colorAt(a); let b = a + 1;
+      while (b < s.length && colorAt(b) === c) b++;
+      g.fillStyle = c;
       g.fillText(s.slice(a, b), x0 + (a ? g.measureText(s.slice(0, a)).width : 0), y);
       a = b;
     }
     return total;
   }
   // IBM Plex Mono 500, majuscules, espacement 3 px. segs : [{t, color}] ou une chaîne.
-  mono(segs, x, y, { size = 26, color = C.muted, align = 'left', spacing = 3, maxW = W - 2 * SAFE.side } = {}) {
+  mono(segs, x, y, { size = 26, color = C.muted, align = 'left', spacing = 3, maxW = W - 2 * SAFE.side, upper = true } = {}) {
     const g = this.g;
     if (typeof segs === 'string') segs = [{ t: segs, color }];
-    const chars = []; segs.forEach(sg => [...sg.t.replace(/[\u0301\u00B4]/g, '').toUpperCase()].forEach(ch => chars.push({ ch, color: sg.color || color })));
+    const chars = []; segs.forEach(sg => [...(upper ? sg.t.replace(/[\u0301\u00B4\[\]]/g, '').toUpperCase() : sg.t)].forEach(ch => chars.push({ ch, color: sg.color || color })));
     let ws, total;
     for (; size >= 16; size--) {
       g.font = `500 ${size}px ${F_MONO}`;
@@ -833,6 +881,224 @@ class VideoRenderer {
   }
 }
 
+/* =====================================================================
+   Modèle « Tu sais lire ça ? » : un mot, compte à rebours, révélation.
+   ===================================================================== */
+const Reading = {
+  SERIES: 'Tu sais lire ça ?',
+  // Durées (s). Total = HOOK + n × (APPEAR + COUNT + REVEAL) + END.
+  HOOK: 2.5, APPEAR: 0.4, COUNT: 2.4, REVEAL: 2.5, END: 3.0, VOICE_DELAY: 0.15, LINE2_AT: 0.8,
+  EPISODE1: [
+    { mot: 'ТАКСИ́', transcription: 'taksí', traduction: 'taxi' },
+    { mot: 'КАКА́О', transcription: 'kakáo', traduction: 'cacao' },
+    { mot: 'ХОР', transcription: 'khor', traduction: 'chœur', note: 'Piège : Х = « kh », Р = « r »' },
+    { mot: 'ПО́ЧТА', transcription: 'pótchta', traduction: 'la poste' },
+    { mot: 'СПУ́ТНИК', transcription: 'spoútnik', traduction: 'satellite' },
+    { mot: 'БОРЩ', transcription: 'borchtch', traduction: 'bortsch', note: 'Щ = « chtch » doux' },
+    { mot: 'ЗДРА́[В]СТВУЙТЕ', transcription: 'zdrástvouïtié', traduction: 'bonjour (en vouvoyant)', note: 'Le premier В ne se prononce pas' },
+  ],
+  exampleJson() { return JSON.stringify(this.EPISODE1, null, 2); },
+
+  // Accepte un tableau de mots, ou { "mots": [...] }.
+  parse(src) {
+    const items = [], errors = [], warnings = [];
+    let data;
+    try { data = JSON.parse(src); } catch (e) { return { items, errors: [`Format JSON invalide : ${e.message}`], warnings }; }
+    const arr = Array.isArray(data) ? data : (data && Array.isArray(data.mots) ? data.mots : null);
+    if (!arr) return { items, errors: ['Il faut une liste de mots : [ {"mot": …, "transcription": …, "traduction": …}, … ]'], warnings };
+    arr.forEach((m, i) => {
+      if (!m || typeof m.mot !== 'string' || !m.mot.trim()) { errors.push(`Mot ${i + 1} : champ « mot » manquant.`); return; }
+      const rich = Stress.parse(m.mot);
+      if (Stress.missingStress(rich)) warnings.push(`Mot ${i + 1} (${rich.text}) : pas d'accent tonique marqué.`);
+      if (!m.traduction) warnings.push(`Mot ${i + 1} (${rich.text}) : pas de traduction.`);
+      items.push({ index: i, rich, text: rich.text,
+        tts: rich.text.toLowerCase(),   // minuscules : évite qu'un mot en capitales soit épelé comme un sigle
+        transcription: String(m.transcription || '').trim(), translation: String(m.traduction || '').trim(), note: String(m.note || '').trim(),
+        srtText: `${rich.text}${m.transcription ? ' — ' + m.transcription : ''}` });
+    });
+    return { items, errors, warnings };
+  },
+
+  // segs : [{ samples, dur }] (voix de chaque mot) ou null pour un aperçu sans audio.
+  build(items, segs, { sampleRate, ticks }) {
+    let t = this.HOOK; const tickTimes = [];
+    const out = items.map((w, i) => {
+      const show = t, countStart = show + this.APPEAR, reveal = countStart + this.COUNT;
+      const dur = segs ? segs[i].dur : 0.9;
+      const next = reveal + Math.max(this.REVEAL, this.VOICE_DELAY + dur + 0.5);
+      if (ticks) for (let k = 0; k < 3; k++) tickTimes.push(countStart + k * this.COUNT / 3);
+      t = next;
+      const start = reveal + this.VOICE_DELAY;
+      return { ...w, show, countStart, reveal, next, start, dur, end: start + dur, dispStart: reveal, dispEnd: next, samples: segs ? segs[i].samples : null };
+    });
+    const endStart = t, total = Math.round((endStart + this.END) * FPS) / FPS;
+    const tl = { kind: 'lecture', items: out, introEnd: this.HOOK, dialogueEnd: endStart, outroStart: endStart, total, frames: Math.round(total * FPS), sampleRate, ticks: tickTimes };
+    tl.wordAt = tt => { let i = -1; out.forEach((w, k) => { if (tt >= w.show) i = k; }); return tt >= endStart ? -1 : i; };
+    tl.describe = tt => {
+      if (tt < this.HOOK) return { label: 'Accroche' };
+      if (tt >= endStart) return { label: 'Écran de fin' };
+      const i = tl.wordAt(tt), w = out[i];
+      const phase = tt < w.countStart ? 'apparition' : tt < w.reveal ? 'avant révélation' : 'après révélation';
+      return { label: `Mot ${i + 1}/${out.length}, ${phase}`, text: w.text };
+    };
+    const last = out[out.length - 1];
+    tl.qcPoints = [['Accroche', 0.5]];
+    if (last) tl.qcPoints.push([`Mot ${out.length} avant`, last.countStart + 1.2], [`Mot ${out.length} après`, last.next - 0.3]);
+    tl.qcPoints.push(['Écran de fin', total - 1.0]);
+    tl.previewAt = out[0] ? out[0].next - 0.3 : 1;
+    return tl;
+  },
+};
+
+const mixHex = (a, b, k) => {
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), A = p(a), B = p(b);
+  return k <= 0 ? a : k >= 1 ? b : `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * k)).join(',')})`;
+};
+const SILENT = '#B8B2A8';   // #5F5A5266 (gris à 40 %) posé sur le fond crème, en couleur pleine
+
+class ReadingRenderer extends VideoRenderer {
+  // Plus grande taille (≤ maxSize) pour laquelle le texte tient en maxLines lignes de largeur maxW.
+  fit(text, fontFn, maxW, maxSize, minSize, maxLines) {
+    const g = this.g;
+    for (let sz = maxSize; sz >= minSize; sz -= 2) {
+      const lines = this.wrap(text, fontFn(sz), maxW);
+      g.font = fontFn(sz);
+      if (lines.length <= maxLines && lines.every(l => g.measureText(l).width <= maxW)) return { size: sz, lines };
+    }
+    return { size: minSize, lines: this.wrap(text, fontFn(minSize), maxW) };
+  }
+
+  layoutAll() {
+    const g = this.g, maxW = W - 2 * SAFE.side, m = this.s.meta, tl = this.s.timeline;
+    const disp = sz => `800 ${sz}px ${F_DISPLAY}`, serif = sz => `500 ${sz}px ${F_SERIF}`;
+    this.words = tl.items.map(it => {
+      // mot : la plus grande taille qui tient sur UNE ligne de 900 px (plafonnée à 320 px)
+      g.font = disp(100);
+      let size = Math.min(320, Math.floor(100 * maxW / Math.max(1, g.measureText(it.text).width)));
+      g.font = disp(size);
+      while (size > 40 && g.measureText(it.text).width > maxW) { size -= 2; g.font = disp(size); }
+      return { it, size, tr: this.fit(it.translation || '', serif, maxW, 64, 40, 2), note: it.note ? this.fit(it.note, serif, maxW, 38, 28, 3) : null };
+    });
+    const n = tl.items.length;
+    this.hook1 = this.fit(`${n} mots ${m.adj}.`, disp, maxW, 180, 80, 2);
+    this.hook2 = this.fit('Combien tu sais en lire ?', disp, maxW, 132, 70, 3);
+    this.end1 = this.fit('Combien tu en as lu ?', disp, maxW, 140, 70, 3);
+    this.end2 = this.fit('Ton score en commentaire 👇', serif, maxW, 60, 40, 2);
+    this.end3 = this.fit('Fiche gratuite de l\'alphabet : lien en bio', serif, maxW, 36, 26, 2);
+  }
+
+  lines(fit, fontFn, y, color, alpha, lhK = 1.1, colorAt) {
+    const g = this.g, lh = fit.size * lhK;
+    g.globalAlpha = alpha; g.font = fontFn(fit.size); g.textAlign = 'center';
+    fit.lines.forEach((l, i) => {
+      const yy = y + lh * (i + 1) - lh * 0.22;
+      if (colorAt) this.drawColored(l, W / 2, yy, j => colorAt(i, j), 'center');
+      else { g.fillStyle = color; g.fillText(l, W / 2, yy); }
+    });
+    return fit.lines.length * lh;
+  }
+
+  draw(t) {
+    const g = this.g, tl = this.s.timeline;
+    g.globalAlpha = 1; g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+    g.textBaseline = 'alphabetic';
+    const idx = tl.wordAt(t);
+    this.drawChrome(t, idx);
+    if (t < Reading.HOOK) this.drawHook(t, 1 - clamp01((t - (Reading.HOOK - 0.25)) / 0.25));
+    else if (t >= tl.outroStart) this.drawEnd(t - tl.outroStart);
+    else if (idx >= 0) this.drawWord(t, idx);
+    g.globalAlpha = 1;
+  }
+
+  // En-tête et pied de page (marges 200/90/300/90)
+  drawChrome(t, idx) {
+    const m = this.s.meta, tl = this.s.timeline, L = SAFE.side, R = W - SAFE.side, n = tl.items.length;
+    this.g.globalAlpha = 1;
+    this.mono(Reading.SERIES, L, SAFE.top + 26, { color: C.accent });
+    this.mono(`${m.langLabel} ${m.level}${m.episode ? ' · Épisode ' + m.episode : ''}`, R, SAFE.top + 26, { align: 'right', color: C.muted });
+    this.rule(L, R, SAFE.top + 60);
+    const y = H - SAFE.bottom - 60;
+    this.rule(L, R, y);
+    const prog = clamp01((t - tl.introEnd) / Math.max(0.01, tl.outroStart - tl.introEnd));
+    if (prog > 0) this.rule(L, L + (R - L) * prog, y, C.accent, 4);
+    const segs = [];
+    if (m.handle) segs.push({ t: m.handle + ' · ', color: C.muted });
+    segs.push({ t: Reading.SERIES, color: C.muted });
+    if (idx >= 0) segs.push({ t: ' · ', color: C.muted }, { t: `${idx + 1}/${n}`, color: C.accent });
+    this.mono(segs, L, H - SAFE.bottom - 4, { color: C.muted });
+  }
+
+  // Zone utile entre l'en-tête (≈ 260) et le pied de page (≈ 1560) : centre ≈ 910
+  drawHook(t, A) {
+    const disp = sz => `800 ${sz}px ${F_DISPLAY}`, gap = 56;
+    const lh1 = this.hook1.size * 1.08, lh2 = this.hook2.size * 1.1;
+    const h = this.hook1.lines.length * lh1 + gap + this.hook2.lines.length * lh2;
+    let y = 910 - h / 2;
+    // ligne 1 visible dès la toute première image ; le nombre est en rouge
+    const digits = (this.hook1.lines[0].match(/^\d+/) || [''])[0].length;
+    y += this.lines(this.hook1, disp, y, C.text, A, 1.08, (li, j) => (li === 0 && j < digits ? C.accent : C.text)) + gap;
+    const k = ease((t - Reading.LINE2_AT) / 0.35);
+    if (k > 0) this.lines(this.hook2, disp, y + (1 - k) * 30, C.text, A * k, 1.1);
+  }
+
+  drawWord(t, i) {
+    const g = this.g, w = this.s.timeline.items[i], L = this.words[i], maxW = W - 2 * SAFE.side;
+    const kIn = ease((t - w.show) / Reading.APPEAR);
+    const kOut = 1 - clamp01((t - (w.next - 0.2)) / 0.2);
+    const A = kIn * kOut;
+    // bloc centré : mot (hauteur ≈ 0,72 × taille) + 130 px + zone du dessous réservée (340 px)
+    const capH = 0.72 * L.size, blockH = capH + 130 + 340;
+    const base = 910 - blockH / 2 + capH, yB = base + 130;
+    // le mot : noir, puis voyelle accentuée en rouge et lettre muette en gris clair à la révélation
+    const rk = clamp01((t - w.reveal) / 0.25);
+    const colorAt = j => w.rich.marks.has(j) ? mixHex(C.text, C.accent, rk) : w.rich.silent.has(j) ? mixHex(C.text, SILENT, rk) : C.text;
+    g.save(); g.globalAlpha = A; g.translate(W / 2, base); const sc = 0.94 + 0.06 * kIn; g.scale(sc, sc);
+    g.font = `800 ${L.size}px ${F_DISPLAY}`; this.drawColored(w.text, 0, 0, colorAt, 'center');
+    g.restore();
+
+    if (t >= w.countStart && t < w.reveal) {
+      // compte à rebours 3 → 2 → 1 + barre qui se vide
+      const el = t - w.countStart, step = Reading.COUNT / 3, num = 3 - Math.min(2, Math.floor(el / step));
+      const kM = ease(el / 0.25);
+      g.globalAlpha = A * kM;
+      this.mono('Lis-le dans ta tête', W / 2, yB + 20, { align: 'center', color: C.muted, size: 28 });
+      const pop = 1 + 0.18 * (1 - ease((el - (3 - num) * step) / 0.2));
+      g.save(); g.translate(W / 2, yB + 230); g.scale(pop, pop);
+      this.mono(String(num), 0, 0, { align: 'center', color: C.accent, size: 170, spacing: 0 });
+      g.restore();
+      const bw = maxW * (1 - el / Reading.COUNT);
+      this.rule(SAFE.side, W - SAFE.side, yB + 310);
+      this.rule(W / 2 - bw / 2, W / 2 + bw / 2, yB + 310, C.accent, 6);
+    } else if (t >= w.reveal) {
+      const at = d => A * ease((t - w.reveal - d) / 0.3);
+      let y = yB + 40;
+      if (w.transcription) { g.globalAlpha = at(0.3); this.mono(w.transcription, W / 2, y, { align: 'center', color: C.muted, size: 50, upper: false }); }
+      y += 40;
+      if (L.tr.lines.length) y += this.lines(L.tr, sz => `500 ${sz}px ${F_SERIF}`, y, C.text, at(0.8), 1.25);
+      if (L.note) {
+        y += 50; g.globalAlpha = at(1.3);
+        this.rule(W / 2 - 30, W / 2 + 30, y, C.accent, 3);
+        this.lines(L.note, sz => `500 ${sz}px ${F_SERIF}`, y + 14, C.muted, at(1.3), 1.3);
+      }
+    }
+    g.globalAlpha = 1;
+  }
+
+  drawEnd(t) {
+    const disp = sz => `800 ${sz}px ${F_DISPLAY}`, serif = sz => `500 ${sz}px ${F_SERIF}`;
+    const lh1 = this.end1.size * 1.1, lh2 = this.end2.size * 1.25, lh3 = this.end3.size * 1.3;
+    const h = this.end1.lines.length * lh1 + 70 + this.end2.lines.length * lh2 + 90 + this.end3.lines.length * lh3;
+    let y = 910 - h / 2;
+    y += this.lines(this.end1, disp, y, C.text, ease(t / 0.3), 1.1) + 70;
+    const k2 = ease((t - 0.7) / 0.35);
+    y += this.lines(this.end2, serif, y + (1 - k2) * 20, C.text, k2, 1.25) + 90;
+    const k3 = ease((t - 1.2) / 0.35);
+    this.g.globalAlpha = k3;
+    this.rule(W / 2 - 30, W / 2 + 30, y - 40, C.accent, 3);
+    this.lines(this.end3, serif, y, C.muted, k3, 1.3);
+  }
+}
+
 /* ---------- Export vidéo : image par image, 30 i/s constants ---------- */
 // Chaque image n°i est dessinée à l'instant exact i/30 s puis encodée avec ce timestamp.
 // H.264 (encodeur matériel via WebCodecs) + AAC, conteneur MP4 avec l'index (moov) au début.
@@ -958,14 +1224,16 @@ const VideoExporter = {
     // 3 images de contrôle : à 5 s, au milieu, 2 s avant la fin
     const cs = new MB.CanvasSink(vt, { width: 270, height: 480, fit: 'fill' });
     const frames = [];
-    for (const [name, t] of [['5 s', 5], ['milieu', vDur / 2], ['fin − 2 s', vDur - 2]]) {
+    const points = timeline.qcPoints || [['5 s', 5], ['milieu', vDur / 2], ['fin − 2 s', vDur - 2]];
+    const describe = timeline.describe || (t => Timeline.lineAt(timeline, t));
+    for (const [name, t] of points) {
       const w = await cs.getCanvas(Math.max(0, t));
       let url = '';
       if (w) {
         const c = document.createElement('canvas'); c.width = 270; c.height = 480; c.getContext('2d').drawImage(w.canvas, 0, 0);
         url = c.toDataURL('image/jpeg', 0.85);
       }
-      frames.push({ name, t, url, expected: Timeline.lineAt(timeline, t) });
+      frames.push({ name, t, url, expected: describe(t) });
     }
     return { ok: checks.every(c => c.ok), checks, frames };
   },
@@ -997,7 +1265,7 @@ const Exports = {
     return `${z(h)}:${z(m)}:${z(s)},${z(ms % 1000, 3)}`;
   },
   srt(tl, withFr) {
-    return tl.items.map((it, i) => `${i + 1}\n${this.srtTime(it.start)} --> ${this.srtTime(Math.min(it.dispEnd, it.end + 0.6))}\n${it.text}${withFr && it.translation ? '\n' + it.translation : ''}\n`).join('\n');
+    return tl.items.map((it, i) => `${i + 1}\n${this.srtTime(it.start)} --> ${this.srtTime(Math.min(it.dispEnd, it.end + 0.6))}\n${it.srtText || it.text}${withFr && it.translation ? '\n' + it.translation : ''}\n`).join('\n');
   },
   download(blob, name) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
@@ -1017,13 +1285,16 @@ const UI = {
   init() {
     const $ = this.el;
     this.renderer = new VideoRenderer($('stage'));
+    this.readRenderer = new ReadingRenderer($('stage'));
     Object.entries(LANGS).forEach(([k, v]) => $('lang').add(new Option(v.label, k)));
     EXAMPLES.forEach(e => $('examples').add(new Option(`${Stress.strip(e.titleRu)} — ${e.titleFr}`, e.id)));
     // réglages mémorisés (sauf la clé, gérée à part)
     const st = Store.get('settings', {});
-    const fields = ['titleRu', 'titleFr', 'place', 'nameM', 'nameF', 'dialogue', 'rate', 'pause', 'level', 'engine', 'handle', 'endText', 'lang'];
+    const fields = ['mode', 'titleRu', 'titleFr', 'place', 'nameM', 'nameF', 'dialogue', 'rate', 'pause', 'level', 'engine', 'handle', 'endText', 'lang', 'readData', 'readEpisode', 'readVoice'];
+    const checks = ['showPrev', 'srtFr', 'readTick'];
     fields.forEach(f => { if (st[f] !== undefined) $(f).value = st[f]; });
-    ['showPrev', 'srtFr'].forEach(f => { if (st[f] !== undefined) $(f).checked = st[f]; });
+    checks.forEach(f => { if (st[f] !== undefined) $(f).checked = st[f]; });
+    if (!$('readData').value.trim()) $('readData').value = Reading.exampleJson();
     $('handle').value = brandName($('handle').value);
     this.fillVoices(st.voiceM, st.voiceF);
     $('azRegion').value = Store.get('region', '');
@@ -1032,13 +1303,16 @@ const UI = {
     if (!$('dialogue').value.trim()) this.loadExample('cafe');
 
     const save = () => {
-      const o = {}; fields.forEach(f => o[f] = $(f).value); ['showPrev', 'srtFr'].forEach(f => o[f] = $(f).checked);
+      const o = {}; fields.forEach(f => o[f] = $(f).value); checks.forEach(f => o[f] = $(f).checked);
       o.voiceM = $('voiceM').value; o.voiceF = $('voiceF').value; Store.set('settings', o);
     };
     this.save = save;
     document.querySelectorAll('input,select,textarea').forEach(n => n.addEventListener('change', save));
     let deb; const live = () => { clearTimeout(deb); deb = setTimeout(() => { this.updateInfo(); this.refreshScene(); }, 250); };
-    ['dialogue', 'titleRu', 'titleFr', 'place', 'nameM', 'nameF', 'handle', 'endText', 'level', 'pause'].forEach(f => $(f).addEventListener('input', live));
+    ['dialogue', 'titleRu', 'titleFr', 'place', 'nameM', 'nameF', 'handle', 'endText', 'level', 'pause', 'readData', 'readEpisode'].forEach(f => $(f).addEventListener('input', live));
+    ['readVoice', 'readTick', 'voiceM', 'voiceF', 'rate'].forEach(f => $(f).addEventListener('change', live));
+    $('mode').addEventListener('change', () => { this.applyMode(); this.stopPlay(); save(); this.updateInfo(); this.refreshScene(); });
+    $('btnEpisode1').addEventListener('click', () => { $('readData').value = Reading.exampleJson(); $('readEpisode').value = '1'; save(); live(); });
     $('handle').addEventListener('change', () => { $('handle').value = brandName($('handle').value); save(); live(); });
     $('showPrev').addEventListener('change', live);
     $('lang').addEventListener('change', () => { this.fillVoices(); save(); live(); });
@@ -1071,6 +1345,7 @@ const UI = {
 
     VideoExporter.support().then(s => { $('fmtInfo').textContent = s.ok ? `MP4 · H.264 + AAC${s.nativeAac ? '' : ' (encodeur AAC de secours)'} · 1080×1920 · 30 i/s` : s.why; })
       .catch(e => { $('fmtInfo').textContent = e.message || 'encodeur indisponible'; });
+    this.applyMode();
     this.showUsage(); this.updateInfo();
     this.refreshScene();
     this.fontsReady().then(() => this.refreshScene());
@@ -1078,7 +1353,7 @@ const UI = {
 
   async fontsReady() {
     if (!document.fonts) return;
-    const sample = 'Привет В КАФЕ Àé 3/14';
+    const sample = 'Привет В КАФЕ ЗДРАВСТВУЙТЕ Àéœï 3/14';
     const ps = [`800 88px "Playfair Display"`, `500 44px "Source Serif 4"`, `500 26px "IBM Plex Mono"`].map(f => document.fonts.load(f, sample));
     await Promise.race([Promise.all(ps).catch(() => {}), sleep(5000)]);
   },
@@ -1086,7 +1361,39 @@ const UI = {
   status(id, msg, kind = '') { const n = this.el(id); n.textContent = msg; n.className = 'status show ' + kind; },
   progress(v) { const p = this.el('prog'); if (v === null) { p.classList.remove('show'); return; } p.classList.add('show'); p.firstElementChild.style.width = `${Math.round(v * 100)}%`; },
   showUsage() { const u = Usage.get(); this.el('usage').textContent = `Estimation ce mois-ci : ${u.toLocaleString('fr-FR')} / 500 000 caractères.`; },
-  fileBase() { return Exports.slug(this.el('titleFr').value || Stress.strip(this.el('titleRu').value)); },
+  fileBase() {
+    if (this.mode() === 'lecture') return Exports.slug(`tu-sais-lire-ca-episode-${this.el('readEpisode').value.trim() || '1'}`);
+    return Exports.slug(this.el('titleFr').value || Stress.strip(this.el('titleRu').value));
+  },
+
+  /* --- modèles de vidéo --- */
+  mode() { return this.el('mode').value === 'lecture' ? 'lecture' : 'dialogue'; },
+  applyMode() {
+    const lec = this.mode() === 'lecture';
+    this.el('secDialogue').style.display = lec ? 'none' : '';
+    this.el('secLecture').style.display = lec ? '' : 'none';
+    this.el('pauseRow').style.display = lec ? 'none' : '';
+    this.el('showPrevRow').style.display = lec ? 'none' : '';
+    this.project = null; this.video = null;
+    ['dlVideo', 'shareVideo'].forEach(id => this.el(id).disabled = true);
+    this.el('result').style.display = 'none'; this.el('qc').style.display = 'none';
+  },
+  activeRenderer() { return this.mode() === 'lecture' ? this.readRenderer : this.renderer; },
+  // Éléments à synthétiser : { text (affichage), tts (envoyé à Azure), voice, … }
+  readItems() {
+    if (this.mode() === 'lecture') {
+      const r = Reading.parse(this.el('readData').value);
+      const voice = this.el(this.el('readVoice').value === 'M' ? 'voiceM' : 'voiceF').value;
+      return { items: r.items.map(w => ({ ...w, voice })), errors: r.errors, warnings: r.warnings };
+    }
+    const { lines, errors } = DialogueParser.parse(this.el('dialogue').value);
+    return { items: lines.map(l => ({ ...l, tts: l.text, voice: this.el(l.speaker === 'M' ? 'voiceM' : 'voiceF').value })), errors, warnings: [] };
+  },
+  buildTimeline(items, segs, sampleRate) {
+    if (this.mode() === 'lecture') return Reading.build(items, segs, { sampleRate, ticks: this.el('readTick').checked });
+    return Timeline.build(items.map((l, i) => ({ line: l, samples: segs ? segs[i].samples : null, dur: segs ? segs[i].dur : this.estDur(l.text) })),
+      { pause: +this.el('pause').value, sampleRate });
+  },
 
   fillVoices(selM, selF) {
     const L = LANGS[this.el('lang').value] || LANGS['ru-RU'], extra = this.liveVoices && this.liveVoices[this.el('lang').value];
@@ -1127,12 +1434,21 @@ const UI = {
   },
 
   updateInfo() {
+    if (this.mode() === 'lecture') {
+      const { items, errors, warnings } = this.readItems();
+      const tl = this.buildTimeline(items, null, 24000);
+      const esc = x => x.replace(/</g, '&lt;');
+      this.el('readInfo').innerHTML = `${items.length} mots · durée ≈ ${tl.total.toFixed(1)} s (cible 35 à 40 s)` +
+        (errors.length ? `<br><span style="color:var(--err)">${errors.slice(0, 3).map(esc).join('<br>')}</span>` : '') +
+        (warnings.length ? `<br><span style="color:var(--warn)">${warnings.slice(0, 4).map(esc).join('<br>')}</span>` : '');
+      return { items, errors };
+    }
     const { lines, errors } = DialogueParser.parse(this.el('dialogue').value);
     const chars = lines.reduce((s, l) => s + l.text.length, 0), stressed = lines.reduce((s, l) => s + l.rich.marks.size, 0);
     const est = lines.reduce((s, l) => s + this.estDur(l.text), 0) + lines.length * +this.el('pause').value + Timeline.INTRO + Timeline.OUTRO;
     this.el('linesInfo').innerHTML = `${lines.length} répliques · ${chars} caractères à synthétiser · ${stressed} accents toniques · durée ≈ ${Math.round(est)} s` +
       (errors.length ? `<br><span style="color:var(--err)">${errors.slice(0, 3).map(e => e.replace(/</g, '&lt;')).join('<br>')}</span>` : '');
-    return { lines, errors };
+    return { items: this.readItems().items, errors };
   },
   estDur(text) { return 0.5 + text.length * 0.075 * (1 - +this.el('rate').value / 100); },
 
@@ -1140,34 +1456,37 @@ const UI = {
     const L = LANGS[this.el('lang').value] || LANGS['ru-RU'], v = f => this.el(f).value.trim();
     return { titleRich: Stress.parse(v('titleRu')), titleFr: v('titleFr'), place: v('place'),
              nameM: Stress.strip(v('nameM')), nameF: Stress.strip(v('nameF')), handle: brandName(v('handle')),
-             endText: v('endText'), level: v('level') || 'A1', langLabel: L.label.replace(/\s*\(.*\)/, ''), thanks: Stress.parse(L.thanks) };
+             endText: v('endText'), level: v('level') || 'A1', langLabel: L.label.replace(/\s*\(.*\)/, ''), thanks: Stress.parse(L.thanks),
+             adj: L.adj || '', episode: v('readEpisode') };
   },
 
   // Signature de ce qui exige une nouvelle synthèse (texte SANS accents : ajouter un accent ne coûte rien)
-  audioSig(lines) { return JSON.stringify([this.el('lang').value, this.el('voiceM').value, this.el('voiceF').value, +this.el('rate').value, lines.map(l => [l.speaker, l.text])]); },
+  audioSig(items) { return JSON.stringify([this.mode(), this.el('lang').value, +this.el('rate').value, items.map(i => [i.voice, i.tts])]); },
 
   // Recalcule la scène (texte/apparence). Réutilise l'audio si les répliques n'ont pas changé.
   refreshScene() {
-    const { lines } = DialogueParser.parse(this.el('dialogue').value);
-    const pause = +this.el('pause').value;
+    const { items } = this.readItems();
     let tl;
     const pr = this.project;
-    if (pr && pr.sig === this.audioSig(lines)) {
-      tl = Timeline.build(pr.segs.map((s, i) => ({ ...s, line: lines[i] })), { pause, sampleRate: pr.sampleRate });
-      if (!pr.timeline || pr.timeline.total !== tl.total || pr.pause !== pause) { pr.mix = Timeline.mix(tl); pr.audioBuffer = this.toBuffer(pr.mix, pr.sampleRate); pr.pause = pause; }
+    if (pr && pr.sig === this.audioSig(items)) {
+      tl = this.buildTimeline(items, pr.segs, pr.sampleRate);
+      const mixKey = tl.items.map(i => i.start.toFixed(3)).join() + '|' + (tl.ticks || []).length + '|' + tl.frames;
+      if (pr.mixKey !== mixKey) { pr.mix = Timeline.mix(tl); pr.audioBuffer = this.toBuffer(pr.mix, pr.sampleRate); pr.mixKey = mixKey; }
       pr.timeline = tl; this.setReady(true);
     } else {
-      tl = Timeline.build(lines.map(l => ({ line: l, samples: null, dur: this.estDur(l.text) })), { pause, sampleRate: 24000 });
+      tl = this.buildTimeline(items, null, 24000);
       this.setReady(false);
     }
-    this.renderer.setScene({ timeline: tl, meta: this.meta(), showPrev: this.el('showPrev').checked });
+    const r = this.activeRenderer();
+    r.setScene({ timeline: tl, meta: this.meta(), showPrev: this.el('showPrev').checked });
     const sk = this.el('seek'); sk.max = tl.total.toFixed(2);
     if (+sk.value > tl.total) sk.value = 0;
-    if (!this.playing && !this.exporting) this.drawAt(+sk.value || Math.min(tl.items.length ? tl.items[Math.min(2, tl.items.length - 1)].start + 0.6 : 1.5, tl.total), true);
+    const def = tl.previewAt != null ? tl.previewAt : (tl.items.length ? tl.items[Math.min(2, tl.items.length - 1)].start + 0.6 : 1.5);
+    if (!this.playing && !this.exporting) this.drawAt(+sk.value || Math.min(def, tl.total), true);
   },
 
   drawAt(t, keepSeek) {
-    this.renderer.draw(t);
+    this.activeRenderer().draw(t);
     if (!keepSeek) this.el('seek').value = t;
     this.timeLabel(t);
   },
@@ -1180,10 +1499,11 @@ const UI = {
 
   async generate() {
     if (this.isBusy) return null;
-    const { lines, errors } = this.updateInfo();
+    const { items: lines, errors } = this.updateInfo();
+    const what = this.mode() === 'lecture' ? 'mots' : 'répliques';
     try {
-      if (errors.length) throw new UserError('Corrige d\'abord le dialogue :\n' + errors.slice(0, 3).join('\n'));
-      if (!lines.length) throw new UserError('Le dialogue est vide.');
+      if (errors.length) throw new UserError(`Corrige d'abord les ${what} :\n` + errors.slice(0, 3).join('\n'));
+      if (!lines.length) throw new UserError(this.mode() === 'lecture' ? 'La liste de mots est vide.' : 'Le dialogue est vide.');
       const sig = this.audioSig(lines);
       if (this.project && this.project.sig === sig) { this.refreshScene(); this.status('mainStatus', '✓ Audio déjà prêt.', 'ok'); return this.project; }
       const c = this.creds(); AzureTTS.checkCreds(c);
@@ -1191,10 +1511,10 @@ const UI = {
       const lang = this.el('lang').value, rate = +this.el('rate').value, engine = this.el('engine').value;
       const segs = []; let fresh = 0;
       for (let i = 0; i < lines.length; i++) {
-        const l = lines[i], voice = this.el(l.speaker === 'M' ? 'voiceM' : 'voiceF').value;
+        const l = lines[i], voice = l.voice;
         this.status('mainStatus', `Synthèse ${i + 1}/${lines.length} : « ${l.text.slice(0, 40)} »`);
         this.progress(i / lines.length);
-        const { buf, cached } = await AzureTTS.synthesize(c, { text: l.text, voice, lang, rate }, {
+        const { buf, cached } = await AzureTTS.synthesize(c, { text: l.tts, voice, lang, rate }, {
           engine, onWait: s => this.status('mainStatus', `Limite gratuite d'Azure (20 requêtes/min) : pause de ${s} s, ça reprend tout seul…`, 'warn') });
         if (!cached) fresh++;
         const ab = await AudioEngine.decode(buf);
@@ -1207,7 +1527,7 @@ const UI = {
       this.el('result').style.display = 'none'; this.el('qc').style.display = 'none';
       this.refreshScene();
       this.progress(null);
-      this.status('mainStatus', `✓ Audio prêt (${lines.length} répliques, ${this.project.timeline.total.toFixed(1)} s). ${fresh} nouvelle(s) synthèse(s), ${lines.length - fresh} depuis le cache.`, 'ok');
+      this.status('mainStatus', `✓ Audio prêt (${lines.length} ${what}, ${this.project.timeline.total.toFixed(1)} s). ${fresh} nouvelle(s) synthèse(s), ${lines.length - fresh} depuis le cache.`, 'ok');
       return this.project;
     } catch (e) {
       this.progress(null); this.status('mainStatus', e.message || String(e), 'err'); console.error(e); return null;
@@ -1248,7 +1568,7 @@ const UI = {
       await this.fontsReady(); this.refreshScene();
       const tl = pr.timeline, t0 = performance.now();
       this.status('mainStatus', `Encodage de ${tl.frames} images (${tl.total.toFixed(1)} s à 30 i/s)…`);
-      const res = await VideoExporter.export({ canvas: this.el('stage'), renderer: this.renderer, timeline: tl, mix: pr.mix, sampleRate: pr.sampleRate,
+      const res = await VideoExporter.export({ canvas: this.el('stage'), renderer: this.activeRenderer(), timeline: tl, mix: pr.mix, sampleRate: pr.sampleRate,
         signal: this.abort.signal,
         onProgress: (p, i, n) => { this.progress(p); this.timeLabel(i / FPS); this.el('seek').value = i / FPS; if (i % 90 === 0) this.status('mainStatus', `Encodage image ${i}/${n}…`); } });
       this.video = res;
@@ -1259,7 +1579,7 @@ const UI = {
       const qc = await VideoExporter.verify(res.blob, tl, res);
       this.showQC(qc);
       this.status('mainStatus', qc.ok
-        ? `✓ Vidéo prête et vérifiée (MP4, ${mb} Mo, ${tl.frames} images). Regarde les 3 images de contrôle, puis télécharge ou partage.`
+        ? `✓ Vidéo prête et vérifiée (MP4, ${mb} Mo, ${tl.frames} images). Regarde les ${qc.frames.length} images de contrôle, puis télécharge ou partage.`
         : `⚠ Vidéo créée mais le contrôle a trouvé un problème (voir la liste). Envoie-moi une capture.`, qc.ok ? 'ok' : 'warn');
       this.drawAt(+this.el('seek').value, true);
     } catch (e) { this.status('mainStatus', e.message || String(e), 'err'); console.error(e); }
@@ -1277,7 +1597,7 @@ const UI = {
     if (!this.video) return;
     const file = new File([this.video.blob], `${this.fileBase()}.${this.video.ext}`, { type: this.video.blob.type });
     try {
-      if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: Stress.strip(this.el('titleRu').value) });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: this.mode() === 'lecture' ? Reading.SERIES : Stress.strip(this.el('titleRu').value) });
       else this.status('mainStatus', 'Le partage direct n\'est pas disponible ici : utilise « Télécharger la vidéo ».', 'warn');
     } catch (e) { if (e.name !== 'AbortError') this.status('mainStatus', 'Partage impossible : ' + e.message, 'err'); }
   },
@@ -1289,7 +1609,7 @@ const UI = {
     try {
       this.status('mainStatus', 'Encodage MP3…');
       const blob = await Exports.mp3(samples, pr.sampleRate);
-      Exports.download(blob, `${this.fileBase()}.mp3`); this.status('mainStatus', '✓ MP3 prêt (dialogue seul, sans écran titre).', 'ok');
+      Exports.download(blob, `${this.fileBase()}.mp3`); this.status('mainStatus', '✓ MP3 prêt (sans écran titre).', 'ok');
     } catch (e) {
       console.error(e);
       Exports.download(Exports.wav(samples, pr.sampleRate), `${this.fileBase()}.wav`);

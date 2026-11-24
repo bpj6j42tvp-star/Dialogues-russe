@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Vérifie une vidéo exportée (sur un ordinateur avec ffmpeg/ffprobe).
-# Usage : outils/verifier-video.sh video.mp4 [dossier_images]
+# Usage : outils/verifier-video.sh video.mp4 [dossier_images] [nom:temps ...]
+#   sans « nom:temps », extrait 3 images : 5 s, milieu, 2 s avant la fin.
+#   ex. : outils/verifier-video.sh ep1.mp4 . accroche:0.5 avant:35.4 apres:37.9 fin:41.6
 # Contrôles : H.264 yuv420p, AAC, 1080x1920, 30 i/s constants, durée vidéo = durée audio (±0,1 s),
 # nombre d'images ≈ durée × 30, index « moov » au début (faststart). Extrait 3 images de contrôle.
 set -euo pipefail
-f="$1"; out="${2:-$(dirname "$f")}"; mkdir -p "$out"
+f="$1"; out="${2:-$(dirname "$f")}"; mkdir -p "$out"; shift $(( $# >= 2 ? 2 : 1 )); points=("$@")
 q() { ffprobe -v error "$@" -of default=nw=1:nk=1 "$f"; }
 vcodec=$(q -select_streams v:0 -show_entries stream=codec_name)
 pix=$(q -select_streams v:0 -show_entries stream=pix_fmt)
@@ -38,7 +40,8 @@ chk "Durées vidéo $vdur s / audio $adur s (±0,1 s)" 'python3 -c "import sys;s
 chk "Images $frames ≈ $adur × 30" 'python3 -c "import sys;sys.exit(abs($frames-round($adur*30))>1)"'
 chk "Faststart (moov avant mdat) : $moov_first" '[ "${moov_first%% *}" = oui ]'
 mid=$(python3 -c "print($vdur/2)"); end=$(python3 -c "print($vdur-2)")
-for p in "05s:5" "milieu:$mid" "fin-2s:$end"; do
+[ ${#points[@]} -eq 0 ] && points=("05s:5" "milieu:$mid" "fin-2s:$end")
+for p in "${points[@]}"; do
   n=${p%%:*}; t=${p#*:}
   ffmpeg -v error -y -ss "$t" -i "$f" -frames:v 1 "$out/controle-$n.png"
   echo "  image de contrôle $n (t=$t s) → $out/controle-$n.png"
