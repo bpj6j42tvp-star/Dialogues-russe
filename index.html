@@ -1,0 +1,1222 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1630">
+<!--
+  Sécurité : la page ne peut envoyer des données QU'À Azure Speech (connect-src).
+  La clé API n'est jamais écrite dans ce fichier.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' blob: data:; media-src 'self' blob: data:; connect-src https://*.tts.speech.microsoft.com wss://*.tts.speech.microsoft.com https://cdn.jsdelivr.net blob: data:; worker-src blob:">
+<title>Studio Dialogues</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Playfair+Display:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c1120; --panel:#141b2e; --panel2:#1b2440; --line:#2a3558;
+  --text:#eef1fa; --muted:#9aa5c4; --accent:#7c9cff; --accent2:#ff9cc0;
+  --ok:#5fd39a; --warn:#ffcc66; --err:#ff7a7a; --radius:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:16px;line-height:1.45;
+  -webkit-text-size-adjust:100%}
+body{padding:16px 16px calc(32px + env(safe-area-inset-bottom))}
+h1{font-family:"Playfair Display",Georgia,serif;font-size:28px;margin:4px 0 2px;font-weight:700}
+h2{font-size:17px;margin:0 0 12px;font-weight:600;display:flex;align-items:center;gap:10px}
+h2 .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#0c1120;font-size:14px;font-weight:700}
+.sub{color:var(--muted);margin:0 0 18px}
+.layout{display:grid;gap:16px;max-width:1200px;margin:0 auto}
+@media (min-width:900px){.layout{grid-template-columns:minmax(0,1fr) 380px;align-items:start}.preview-col{position:sticky;top:16px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+label{display:block;font-size:14px;color:var(--muted);margin:10px 0 4px}
+input[type=text],input[type=password],select,textarea{width:100%;font:inherit;color:var(--text);background:var(--panel2);
+  border:1px solid var(--line);border-radius:12px;padding:12px;min-height:46px;outline:none;-webkit-appearance:none;appearance:none}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:36px}
+textarea{min-height:260px;font-size:15px;line-height:1.5;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.row{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.row3{display:grid;gap:10px;grid-template-columns:1fr 1fr 1fr}
+@media (max-width:520px){.row3{grid-template-columns:1fr 1fr}}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+button,.btn{font:inherit;font-weight:600;border:0;border-radius:12px;min-height:48px;padding:12px 18px;cursor:pointer;
+  background:var(--panel2);color:var(--text);border:1px solid var(--line);touch-action:manipulation}
+button.primary{background:linear-gradient(135deg,#7c9cff,#a47cff);color:#0b0f1d;border:0}
+button.pink{background:linear-gradient(135deg,#ff9cc0,#ffb98a);color:#1d0b12;border:0}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.small{min-height:40px;padding:8px 12px;font-size:14px}
+.check{display:flex;align-items:center;gap:10px;margin-top:10px;color:var(--text);font-size:15px}
+.check input{width:24px;height:24px;accent-color:var(--accent)}
+.range{display:flex;align-items:center;gap:12px}
+.range input{flex:1;accent-color:var(--accent);height:32px}
+.range output{min-width:64px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text)}
+.status{margin-top:10px;font-size:14px;padding:10px 12px;border-radius:10px;background:var(--panel2);display:none;white-space:pre-line}
+.status.show{display:block}.status.ok{color:var(--ok)}.status.err{color:var(--err);background:#2a1620}.status.warn{color:var(--warn)}
+.hint{font-size:13px;color:var(--muted);margin-top:6px}
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.swatch{width:56px;height:56px;border-radius:14px;border:2px solid transparent;padding:0;min-height:0}
+.swatch[aria-pressed=true]{border-color:#fff;box-shadow:0 0 0 3px var(--accent)}
+.preview-wrap{background:#000;border-radius:18px;overflow:hidden;border:1px solid var(--line);aspect-ratio:9/16;width:100%;max-width:380px;margin:0 auto}
+canvas#stage{width:100%;height:100%;display:block}
+.progress{height:8px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-top:12px;display:none}
+.progress.show{display:block}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7c9cff,#ff9cc0);transition:width .2s}
+.downloads{display:grid;gap:10px;grid-template-columns:1fr 1fr;margin-top:12px}
+.downloads button{width:100%}
+.downloads .wide{grid-column:1/-1}
+.pill{display:inline-block;font-size:12px;padding:3px 8px;border-radius:99px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+details summary{cursor:pointer;color:var(--muted);font-size:14px;min-height:32px}
+.lines-info{font-size:13px;color:var(--muted);margin-top:6px}
+video#result{width:100%;max-width:380px;display:none;margin:12px auto 0;border-radius:14px;background:#000}
+.foot{color:var(--muted);font-size:12px;text-align:center;margin-top:8px}
+</style>
+</head>
+<body>
+<header style="max-width:1200px;margin:0 auto">
+  <h1>Studio Dialogues</h1>
+  <p class="sub">Dialogues courts → vidéo 9:16 avec voix Azure, texte russe et traduction française.</p>
+</header>
+
+<div class="layout">
+<main>
+  <!-- 1. Clé Azure -->
+  <section class="card">
+    <h2><span class="n">1</span>Clé Azure Speech</h2>
+    <div class="row">
+      <div>
+        <label for="azKey">Clé (KEY 1 ou KEY 2)</label>
+        <input id="azKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Colle ta clé ici">
+      </div>
+      <div>
+        <label for="azRegion">Région (Location)</label>
+        <input id="azRegion" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. westeurope">
+      </div>
+    </div>
+    <label class="check"><input id="azRemember" type="checkbox"> Mémoriser la clé sur cet iPad</label>
+    <div class="btns">
+      <button id="btnTestKey">Tester la clé</button>
+      <button id="btnForgetKey">Effacer la clé</button>
+    </div>
+    <div id="keyStatus" class="status"></div>
+    <p class="hint">La clé ne sert qu'à appeler Azure, directement depuis cet appareil. Elle n'est envoyée nulle part ailleurs. <span id="usage"></span></p>
+  </section>
+
+  <!-- 2. Dialogue -->
+  <section class="card">
+    <h2><span class="n">2</span>Dialogue</h2>
+    <label for="examples">Exemples</label>
+    <select id="examples"><option value="">— Choisir un exemple —</option></select>
+    <div class="row">
+      <div><label for="titleRu">Titre (langue cible)</label><input id="titleRu" type="text" placeholder="В кафе"></div>
+      <div><label for="titleFr">Titre (français)</label><input id="titleFr" type="text" placeholder="Au café"></div>
+    </div>
+    <div class="row3">
+      <div><label for="place">Lieu / sous-titre</label><input id="place" type="text" placeholder="Moscou"></div>
+      <div><label for="nameM">Nom M (homme)</label><input id="nameM" type="text" placeholder="Максим"></div>
+      <div><label for="nameF">Nom F (femme)</label><input id="nameF" type="text" placeholder="Анна"></div>
+    </div>
+    <label for="dialogue">Répliques — une par ligne : <b>M: russe | français</b></label>
+    <textarea id="dialogue" spellcheck="false" placeholder="M: Привет! | Salut !&#10;F: Привет! Как дела? | Salut ! Ça va ?"></textarea>
+    <div id="linesInfo" class="lines-info"></div>
+  </section>
+
+  <!-- 3. Voix -->
+  <section class="card">
+    <h2><span class="n">3</span>Voix et rythme</h2>
+    <div class="row3">
+      <div><label for="lang">Langue</label><select id="lang"></select></div>
+      <div><label for="voiceM">Voix M</label><select id="voiceM"></select></div>
+      <div><label for="voiceF">Voix F</label><select id="voiceF"></select></div>
+    </div>
+    <label for="rate">Débit de la voix</label>
+    <div class="range"><input id="rate" type="range" min="-50" max="20" step="5" value="-15"><output id="rateOut">-15 %</output></div>
+    <label for="pause">Pause entre les répliques</label>
+    <div class="range"><input id="pause" type="range" min="0.2" max="3" step="0.1" value="0.8"><output id="pauseOut">0,8 s</output></div>
+    <div class="row">
+      <div><label for="level">Niveau</label><input id="level" type="text" value="A1"></div>
+      <div><label for="engine">Connexion Azure</label>
+        <select id="engine">
+          <option value="auto">Automatique (recommandé)</option>
+          <option value="rest">API REST uniquement</option>
+          <option value="sdk">SDK Speech (WebSocket)</option>
+        </select></div>
+    </div>
+  </section>
+
+  <!-- 4. Apparence -->
+  <section class="card">
+    <h2><span class="n">4</span>Apparence</h2>
+    <label>Fond</label>
+    <div class="swatches" id="swatches"></div>
+    <div class="row" style="margin-top:6px">
+      <div><label for="solid">Couleur unie</label><input id="solid" type="color" value="#1e2a4a" style="width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--panel2)"></div>
+      <div><label for="bgFile">Image de fond</label>
+        <input id="bgFile" type="file" accept="image/*" style="display:none">
+        <div class="btns" style="margin-top:0"><button id="btnPickImg" class="small">Importer…</button><button id="btnClearImg" class="small">Retirer</button></div>
+      </div>
+    </div>
+    <div class="row">
+      <div><label for="handle">Nom de la chaîne</label><input id="handle" type="text" placeholder="@ma_chaine_russe"></div>
+      <div><label for="endText">Texte de fin</label><input id="endText" type="text" value="Abonne-toi pour d'autres dialogues !"></div>
+    </div>
+    <label class="check"><input id="showPrev" type="checkbox" checked> Afficher la réplique précédente en transparence</label>
+  </section>
+</main>
+
+<!-- Aperçu / export -->
+<aside class="preview-col">
+  <section class="card">
+    <h2><span class="n">5</span>Aperçu et export</h2>
+    <div class="preview-wrap"><canvas id="stage" width="1080" height="1920"></canvas></div>
+    <div class="range" style="margin-top:10px"><input id="seek" type="range" min="0" max="60" step="0.05" value="0"><output id="timeOut">0:00</output></div>
+    <div class="btns">
+      <button id="btnGen" class="primary" style="flex:1">Générer l'audio</button>
+      <button id="btnPlay" style="flex:1">▶ Aperçu</button>
+    </div>
+    <div class="btns"><button id="btnExport" class="pink" style="flex:1">● Créer la vidéo</button></div>
+    <div class="progress" id="prog"><i></i></div>
+    <div id="mainStatus" class="status"></div>
+    <video id="result" controls playsinline></video>
+    <div class="downloads">
+      <button id="dlVideo" class="wide" disabled>Télécharger la vidéo</button>
+      <button id="shareVideo" class="wide" disabled>Partager / Enregistrer dans Photos</button>
+      <button id="dlMp3" disabled>Audio MP3</button>
+      <button id="dlSrt" disabled>Sous-titres .srt</button>
+    </div>
+    <p class="hint">Pendant l'export, garde l'écran allumé et cette page au premier plan : la vidéo s'enregistre en temps réel (1 min de dialogue ≈ 1 min d'export).</p>
+    <details><summary>Options avancées</summary>
+      <label class="check"><input id="listen" type="checkbox" checked> Entendre le son pendant l'export</label>
+      <label class="check"><input id="srtFr" type="checkbox" checked> Inclure la traduction dans le .srt</label>
+      <div class="btns"><button id="btnClearCache" class="small">Vider le cache audio</button></div>
+      <p class="hint">Le cache garde l'audio déjà généré sur l'iPad : régénérer la même réplique ne consomme pas ton quota.</p>
+    </details>
+  </section>
+  <p class="foot">Format vidéo : <span id="fmtInfo">—</span></p>
+</aside>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+   Studio Dialogues — une seule page, sans serveur.
+   Modules : Store · Langs · Examples · DialogueParser · AzureTTS ·
+             AudioEngine · Timeline · VideoRenderer · Recorder · Exports · UI
+   ===================================================================== */
+
+/* ---------- Store : localStorage protégé (mode privé, etc.) ---------- */
+const Store = {
+  get(k, d = null) { try { const v = localStorage.getItem('sd.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('sd.' + k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem('sd.' + k); } catch {} },
+};
+
+/* ---------- Langues et voix (facile à étendre) ---------- */
+const LANGS = {
+  'ru-RU': { label: 'Russe', native: 'РУССКИЙ', thanks: 'Спасибо!', subtitle: 'Dialogue en russe',
+    voices: { M: ['ru-RU-DmitryNeural'], F: ['ru-RU-SvetlanaNeural', 'ru-RU-DariyaNeural'] } },
+  'ka-GE': { label: 'Géorgien (test)', native: 'ქართული', thanks: 'მადლობა!', subtitle: 'Dialogue en géorgien',
+    voices: { M: ['ka-GE-GiorgiNeural'], F: ['ka-GE-EkaNeural'] } },
+  'sr-RS': { label: 'Serbe (test)', native: 'СРПСКИ', thanks: 'Хвала!', subtitle: 'Dialogue en serbe',
+    voices: { M: ['sr-RS-NicholasNeural'], F: ['sr-RS-SophieNeural'] } },
+};
+
+/* ---------- Exemples ---------- */
+const EXAMPLES = [
+  { id: 'cafe', titleRu: 'В кафе', titleFr: 'Au café', place: 'Moscou', nameM: 'Максим', nameF: 'Анна', text:
+`M: Привет! Здесь свободно? | Salut ! C'est libre ?
+F: Привет! Да, свободно. Садись. | Salut ! Oui, c'est libre. Assieds-toi.
+M: Спасибо. Меня зовут Максим. А тебя? | Merci. Je m'appelle Maxime. Et toi ?
+F: Меня зовут Анна. Очень приятно. | Je m'appelle Anna. Enchantée.
+M: Мне тоже. Ты студентка? | Moi aussi. Tu es étudiante ?
+F: Да. Я изучаю французский язык. | Oui. J'étudie le français.
+M: Правда? Ты говоришь по-французски? | C'est vrai ? Tu parles français ?
+F: Немного. А ты студент? | Un peu. Et toi, tu es étudiant ?
+M: Нет, я работаю. Я программист. | Non, je travaille. Je suis programmeur.
+F: Ты живёшь в Москве? | Tu habites à Moscou ?
+M: Да, недалеко. Я люблю это кафе. | Oui, pas loin. J'aime ce café.
+F: Я тоже! Здесь очень вкусный кофе. | Moi aussi ! Le café est très bon ici.
+M: Ну, до встречи, Анна! | Bon, à bientôt, Anna !
+F: Пока, Максим! | Salut, Maxime !` },
+  { id: 'magasin', titleRu: 'В магазине', titleFr: 'Au magasin', place: '', nameM: 'Покупатель', nameF: 'Продавщица', text:
+`F: Здравствуйте! | Bonjour !
+M: Здравствуйте! У вас есть хлеб? | Bonjour ! Vous avez du pain ?
+F: Да. Белый или чёрный? | Oui. Blanc ou noir ?
+M: Чёрный, пожалуйста. И ещё молоко. | Noir, s'il vous plaît. Et aussi du lait.
+F: Вот, пожалуйста. Что ещё? | Voilà. Et avec ça ?
+M: Сыр. Сколько стоит этот сыр? | Du fromage. Combien coûte ce fromage ?
+F: Двести рублей. | Deux cents roubles.
+M: Хорошо. И яблоки, один килограмм. | D'accord. Et des pommes, un kilo.
+F: Красные или зелёные? | Rouges ou vertes ?
+M: Зелёные. Это всё. Сколько с меня? | Vertes. C'est tout. Je vous dois combien ?
+F: Пятьсот пятьдесят рублей. | Cinq cent cinquante roubles.
+M: Можно картой? | Je peux payer par carte ?
+F: Да, конечно. Спасибо! До свидания! | Oui, bien sûr. Merci ! Au revoir !
+M: До свидания! | Au revoir !` },
+  { id: 'rue', titleRu: 'На улице', titleFr: 'Dans la rue', place: 'Saint-Pétersbourg', nameM: 'Турист', nameF: 'Прохожая', text:
+`M: Извините, пожалуйста! Где метро? | Excusez-moi ! Où est le métro ?
+F: Это недалеко. Идите прямо. | Ce n'est pas loin. Allez tout droit.
+M: Прямо… А потом? | Tout droit… Et ensuite ?
+F: Потом направо. Там большой магазин. Метро рядом. | Ensuite à droite. Il y a un grand magasin. Le métro est à côté.
+M: Это далеко? | C'est loin ?
+F: Нет, пять минут пешком. | Non, cinq minutes à pied.
+M: Спасибо! Извините, я плохо говорю по-русски. | Merci ! Désolé, je parle mal russe.
+F: Нет, вы хорошо говорите! Откуда вы? | Mais non, vous parlez bien ! Vous venez d'où ?
+M: Я из Франции. Я турист. | Je viens de France. Je suis touriste.
+F: Вам нравится Петербург? | Saint-Pétersbourg vous plaît ?
+M: Да, очень! Это красивый город. | Oui, beaucoup ! C'est une belle ville.
+F: Спасибо! Хорошего дня! | Merci ! Bonne journée !
+M: Вам тоже! До свидания! | Vous aussi ! Au revoir !` },
+];
+
+/* ---------- Parsing du dialogue ---------- */
+const DialogueParser = {
+  // Accepte « M: … | … », « F - … | … », M cyrillique, H (homme), Ж (женщина).
+  parse(src) {
+    const lines = [], errors = [];
+    src.split(/\r?\n/).forEach((raw, i) => {
+      const s = raw.trim();
+      if (!s || s.startsWith('#') || s.startsWith('//')) return;
+      const m = s.match(/^([MFМHЖ])\s*[:：\-–—]\s*(.+)$/iu);
+      if (!m) { errors.push(`Ligne ${i + 1} : elle doit commencer par « M: » ou « F: ».`); return; }
+      let sp = m[1].toUpperCase();
+      if (sp === 'М' || sp === 'H') sp = 'M';
+      if (sp === 'Ж') sp = 'F';
+      const parts = m[2].split('|');
+      const text = parts[0].trim();
+      const translation = parts.slice(1).join('|').trim();
+      if (!text) { errors.push(`Ligne ${i + 1} : réplique vide.`); return; }
+      if (text.length > 1000) { errors.push(`Ligne ${i + 1} : réplique trop longue (1000 caractères max).`); return; }
+      lines.push({ speaker: sp, text, translation, lineNo: i + 1 });
+    });
+    return { lines, errors };
+  },
+};
+
+/* ---------- Erreurs en français ---------- */
+class UserError extends Error { constructor(msg, opts = {}) { super(msg); this.retryable = !!opts.retryable; this.code = opts.code; } }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- Cache audio (IndexedDB) : évite de repayer le quota ---------- */
+const AudioCache = {
+  mem: new Map(), dbp: null,
+  db() {
+    if (this.dbp) return this.dbp;
+    this.dbp = new Promise(res => {
+      try {
+        const r = indexedDB.open('studio-dialogues', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('tts');
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => res(null);
+      } catch { res(null); }
+    });
+    return this.dbp;
+  },
+  async get(k) {
+    if (this.mem.has(k)) return this.mem.get(k);
+    const db = await this.db(); if (!db) return null;
+    return new Promise(res => {
+      try {
+        const q = db.transaction('tts').objectStore('tts').get(k);
+        q.onsuccess = () => { if (q.result) this.mem.set(k, q.result); res(q.result || null); };
+        q.onerror = () => res(null);
+      } catch { res(null); }
+    });
+  },
+  async put(k, buf) {
+    this.mem.set(k, buf);
+    const db = await this.db(); if (!db) return;
+    try { db.transaction('tts', 'readwrite').objectStore('tts').put(buf, k); } catch {}
+  },
+  async clear() {
+    this.mem.clear();
+    const db = await this.db(); if (!db) return;
+    try { db.transaction('tts', 'readwrite').objectStore('tts').clear(); } catch {}
+  },
+};
+
+/* ---------- Synthèse vocale Azure ---------- */
+const AzureTTS = {
+  FORMAT: 'riff-24khz-16bit-mono-pcm',      // WAV : décodage exact, durées précises
+  SDK_URL: 'https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@1.40.0/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js',
+  recent: [],                                 // horodatages pour respecter 20 requêtes / 60 s (F0)
+  restBlocked: false,
+
+  checkCreds({ key, region }) {
+    if (!key) throw new UserError('Ajoute ta clé Azure (étape 1).');
+    if (!/^[a-z0-9]+$/.test(region || '')) throw new UserError('Région invalide. Exemple : westeurope (en minuscules, sans espace). Tu la trouves dans Azure, rubrique « Clés et point de terminaison » → « Emplacement/Région ».');
+  },
+  host(region) { return `https://${region}.tts.speech.microsoft.com`; },
+  xml(s) { return s.replace(/[<>&'"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c])); },
+  ssml({ text, voice, lang, rate }) {
+    const r = `${rate >= 0 ? '+' : ''}${rate}%`;
+    return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${lang}"><voice name="${voice}"><prosody rate="${r}">${this.xml(text)}</prosody></voice></speak>`;
+  },
+  cacheKey(p) { return [this.FORMAT, p.voice, p.rate, p.text].join('|'); },
+
+  async throttle(onWait) {
+    const now = Date.now();
+    this.recent = this.recent.filter(t => now - t < 60000);
+    if (this.recent.length >= 18) {
+      const wait = 60000 - (now - this.recent[0]) + 300;
+      onWait && onWait(Math.ceil(wait / 1000));
+      await sleep(wait);
+    }
+    this.recent.push(Date.now());
+  },
+
+  httpError(status, body) {
+    const b = (body || '').slice(0, 200);
+    switch (status) {
+      case 400: return new UserError(`Azure a refusé la requête (400) : texte ou nom de voix invalide.${b ? '\n' + b : ''}`);
+      case 401: return new UserError('Clé refusée (401). Vérifie la clé et que la région correspond bien à TA ressource Speech.', { code: 401 });
+      case 403: return new UserError('Accès refusé (403) : quota gratuit du mois probablement épuisé, ou ressource désactivée. Vérifie dans le portail Azure.', { code: 403 });
+      case 404: return new UserError('Adresse introuvable (404) : la région saisie est sans doute incorrecte.');
+      case 415: return new UserError('Format de requête refusé (415).');
+      case 429: return new UserError('Trop de requêtes (429) : limite du niveau gratuit atteinte.', { retryable: true, code: 429 });
+      default:
+        if (status >= 500) return new UserError(`Azure est momentanément indisponible (${status}).`, { retryable: true });
+        return new UserError(`Erreur Azure inattendue (${status}).`);
+    }
+  },
+  networkError() {
+    return new UserError(navigator.onLine === false
+      ? 'Pas de connexion Internet.'
+      : 'Impossible de joindre Azure. Vérifie la région (ex. westeurope) et ta connexion.', { code: 'network' });
+  },
+
+  async viaRest(creds, p) {
+    let res;
+    try {
+      res = await fetch(`${this.host(creds.region)}/cognitiveservices/v1`, {
+        method: 'POST', mode: 'cors', cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer',
+        headers: { 'Ocp-Apim-Subscription-Key': creds.key, 'Content-Type': 'application/ssml+xml', 'X-Microsoft-OutputFormat': this.FORMAT },
+        body: this.ssml(p),
+      });
+    } catch { throw this.networkError(); }
+    if (!res.ok) { let t = ''; try { t = await res.text(); } catch {} const e = this.httpError(res.status, t); e.retryAfter = +res.headers.get('Retry-After') || 0; throw e; }
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength < 100) throw new UserError('Azure a renvoyé un audio vide.');
+    return buf;
+  },
+
+  sdkPromise: null,
+  loadSdk() {
+    if (window.SpeechSDK) return Promise.resolve(window.SpeechSDK);
+    if (!this.sdkPromise) this.sdkPromise = loadScript(this.SDK_URL).then(() => {
+      if (!window.SpeechSDK) throw new Error(); return window.SpeechSDK;
+    }).catch(() => { this.sdkPromise = null; throw new UserError('Impossible de charger le SDK Speech (connexion ?).'); });
+    return this.sdkPromise;
+  },
+  async viaSdk(creds, p) {
+    const sdk = await this.loadSdk();
+    return new Promise((resolve, reject) => {
+      const cfg = sdk.SpeechConfig.fromSubscription(creds.key, creds.region);
+      cfg.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
+      const synth = new sdk.SpeechSynthesizer(cfg, null);
+      synth.speakSsmlAsync(this.ssml(p), r => {
+        synth.close();
+        if (r.reason === sdk.ResultReason.SynthesizingAudioCompleted && r.audioData && r.audioData.byteLength > 100) return resolve(r.audioData);
+        const d = (r.errorDetails || '');
+        if (/401|auth|unauthori/i.test(d)) return reject(this.httpError(401));
+        if (/403|quota/i.test(d)) return reject(this.httpError(403));
+        if (/429|throttl|too many/i.test(d)) return reject(this.httpError(429));
+        reject(new UserError('La synthèse a échoué : ' + (d || 'raison inconnue')));
+      }, err => { synth.close(); reject(new UserError('La synthèse a échoué : ' + err)); });
+    });
+  },
+
+  // Renvoie { buf: ArrayBuffer(WAV), cached: bool }
+  async synthesize(creds, p, { engine = 'auto', onWait } = {}) {
+    const k = this.cacheKey(p);
+    const hit = await AudioCache.get(k);
+    if (hit) return { buf: hit, cached: true };
+    for (let attempt = 0; ; attempt++) {
+      await this.throttle(onWait);
+      try {
+        let buf;
+        const useSdk = engine === 'sdk' || (engine === 'auto' && this.restBlocked);
+        if (useSdk) buf = await this.viaSdk(creds, p);
+        else {
+          try { buf = await this.viaRest(creds, p); }
+          catch (e) {
+            // Un « TypeError » réseau peut venir d'un blocage CORS : on tente le SDK (WebSocket).
+            if (engine === 'auto' && e.code === 'network' && navigator.onLine !== false) {
+              buf = await this.viaSdk(creds, p); this.restBlocked = true;
+            } else throw e;
+          }
+        }
+        await AudioCache.put(k, buf);
+        Usage.add(p.text.length);
+        return { buf, cached: false };
+      } catch (e) {
+        if (e.retryable && attempt < 4) {
+          const wait = e.retryAfter ? e.retryAfter * 1000 : 5000 * (attempt + 1);
+          onWait && onWait(Math.ceil(wait / 1000));
+          await sleep(wait); continue;
+        }
+        throw e;
+      }
+    }
+  },
+
+  async listVoices(creds) {
+    let res;
+    try {
+      res = await fetch(`${this.host(creds.region)}/cognitiveservices/voices/list`, {
+        cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer',
+        headers: { 'Ocp-Apim-Subscription-Key': creds.key },
+      });
+    } catch { throw this.networkError(); }
+    if (!res.ok) throw this.httpError(res.status);
+    return res.json();
+  },
+};
+
+/* ---------- Compteur de caractères (estimation locale) ---------- */
+const Usage = {
+  key() { const d = new Date(); return `usage-${d.getFullYear()}-${d.getMonth() + 1}`; },
+  get() { return Store.get(this.key(), 0); },
+  add(n) { Store.set(this.key(), this.get() + n); UI.showUsage(); },
+};
+
+/* ---------- Chargement de scripts externes ---------- */
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.async = true; s.crossOrigin = 'anonymous';
+    s.onload = res; s.onerror = () => rej(new Error('load ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+/* ---------- Audio : contexte, décodage, nettoyage ---------- */
+const AudioEngine = {
+  ctx: null,
+  get() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) throw new UserError('Ce navigateur ne gère pas l\'audio Web.');
+      this.ctx = new AC();
+    }
+    return this.ctx;
+  },
+  unlock() { try { const c = this.get(); if (c.state !== 'running') c.resume(); } catch {} },
+  decode(buf) {
+    const c = this.get();
+    return new Promise((res, rej) => {
+      const p = c.decodeAudioData(buf.slice(0), res, () => rej(new UserError('Audio reçu illisible.')));
+      if (p && p.catch) p.catch(() => {});
+    });
+  },
+  // Retire les silences de début/fin (en gardant une marge) → pauses régulières.
+  trim(ab) {
+    const d = ab.getChannelData(0), sr = ab.sampleRate, th = 0.006, margin = Math.round(0.04 * sr);
+    let s = 0, e = d.length - 1;
+    while (s < d.length && Math.abs(d[s]) < th) s++;
+    while (e > s && Math.abs(d[e]) < th) e--;
+    s = Math.max(0, s - margin); e = Math.min(d.length, e + margin);
+    return d.slice(s, e);
+  },
+};
+
+/* ---------- Timeline : place l'audio et le texte dans le temps ---------- */
+const Timeline = {
+  INTRO: 2.8, LEAD: 0.5, TAIL: 0.8, OUTRO: 3.4, FPS_ENV: 30,
+  // segs : [{ line, samples:Float32Array|null, dur }]
+  build(segs, { pause, sampleRate }) {
+    let t = this.INTRO + this.LEAD;
+    const items = segs.map((s, i) => {
+      const it = { ...s.line, index: i, start: t, dur: s.dur, end: t + s.dur, samples: s.samples };
+      t = it.end + (i < segs.length - 1 ? pause : 0);
+      return it;
+    });
+    items.forEach((it, i) => {
+      it.dispStart = Math.max(this.INTRO, it.start - 0.25);
+      it.dispEnd = i < items.length - 1 ? items[i + 1].start - 0.25 : it.end + this.TAIL;
+    });
+    const dialogueEnd = (items.length ? items[items.length - 1].end : this.INTRO) + this.TAIL;
+    return { items, introEnd: this.INTRO, dialogueEnd, outroStart: dialogueEnd, total: dialogueEnd + this.OUTRO, sampleRate };
+  },
+  mix(tl, { from = 0, to = tl.total } = {}) {
+    const sr = tl.sampleRate, out = new Float32Array(Math.ceil((to - from) * sr));
+    for (const it of tl.items) if (it.samples) out.set(it.samples.subarray(0, Math.max(0, out.length - Math.round((it.start - from) * sr))), Math.round((it.start - from) * sr));
+    return out;
+  },
+  envelope(mix, sr) {
+    const step = Math.round(sr / this.FPS_ENV), n = Math.ceil(mix.length / step), env = new Float32Array(n);
+    let max = 1e-6;
+    for (let i = 0; i < n; i++) {
+      let s = 0; const a = i * step, b = Math.min(mix.length, a + step);
+      for (let j = a; j < b; j += 4) s += mix[j] * mix[j];
+      env[i] = Math.sqrt(s / Math.max(1, (b - a) / 4)); if (env[i] > max) max = env[i];
+    }
+    for (let i = 0; i < n; i++) env[i] = Math.min(1, env[i] / max);
+    return env;
+  },
+};
+
+/* ---------- Thèmes visuels ---------- */
+const THEMES = {
+  nuit:   { label: 'Nuit',    stops: ['#0b1230', '#1b2a66', '#3a2470'], glow: ['#5b7cff', '#b06cff'], accM: '#8cc8ff', accF: '#ff9cc4' },
+  aurore: { label: 'Aurore',  stops: ['#2a0f33', '#6e2650', '#d8745a'], glow: ['#ff8a7a', '#ffc36b'], accM: '#9fd8ff', accF: '#ffd08a' },
+  neva:   { label: 'Néva',    stops: ['#06222c', '#0d4454', '#2c7a7b'], glow: ['#46d1c4', '#7aa8ff'], accM: '#9ae6ff', accF: '#ffb4c8' },
+  moscou: { label: 'Kremlin', stops: ['#2a0a0e', '#6d1520', '#a3283a'], glow: ['#ff5a5a', '#e0b04a'], accM: '#ffd88a', accF: '#ffb0c0' },
+  encre:  { label: 'Encre',   stops: ['#0d0d12', '#17171f', '#262633'], glow: ['#6a6aff', '#ff6ab0'], accM: '#8cc8ff', accF: '#ff9cc4' },
+  creme:  { label: 'Crème',   stops: ['#f7f0e6', '#efe2cf', '#e2cdb2'], glow: ['#ffffff', '#f3c9a0'], accM: '#2f5fb3', accF: '#b8406b', light: true },
+};
+function hexLum(hex) {
+  const n = parseInt(hex.slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const t = f < 0 ? 0 : 255, p = Math.abs(f);
+  r = Math.round((t - r) * p + r); g = Math.round((t - g) * p + g); b = Math.round((t - b) * p + b);
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
+/* ---------- Rendu vidéo (canvas 1080×1920) ---------- */
+const W = 1080, H = 1920;
+const FONT = 'Inter, -apple-system, "Helvetica Neue", "Noto Sans Georgian", sans-serif';
+const SERIF = '"Playfair Display", Georgia, "Times New Roman", serif';
+const ease = x => (x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.pow(1 - x, 3));
+const clamp01 = x => Math.max(0, Math.min(1, x));
+
+class VideoRenderer {
+  constructor(canvas) { this.c = canvas; this.ctx = canvas.getContext('2d'); this.bg = document.createElement('canvas'); this.bg.width = W; this.bg.height = H; }
+
+  setScene(scene) { this.s = scene; this.palette(); this.paintBackground(); this.layoutAll(); }
+
+  palette() {
+    const s = this.s; let th = THEMES[s.theme] || THEMES.nuit;
+    if (s.theme === 'uni') {
+      const c = s.solid, light = hexLum(c) > 0.6;
+      th = { stops: [shade(c, -0.15), c, shade(c, light ? -0.08 : 0.12)], glow: [shade(c, 0.4), shade(c, 0.25)],
+             accM: light ? '#2f5fb3' : '#8cc8ff', accF: light ? '#b8406b' : '#ff9cc4', light };
+    }
+    if (s.image) th = { ...th, light: false };
+    const L = th.light;
+    this.p = { ...th,
+      text: L ? '#22180f' : '#ffffff', muted: L ? 'rgba(34,24,15,.62)' : 'rgba(255,255,255,.68)',
+      card: L ? 'rgba(255,255,255,.62)' : 'rgba(255,255,255,.10)', cardStroke: L ? 'rgba(80,50,20,.12)' : 'rgba(255,255,255,.20)',
+      shadow: L ? 'rgba(90,60,30,.14)' : 'rgba(0,0,0,.28)', bar: L ? 'rgba(34,24,15,.12)' : 'rgba(255,255,255,.16)' };
+  }
+
+  paintBackground() {
+    const g = this.bg.getContext('2d'), s = this.s, p = this.p;
+    g.clearRect(0, 0, W, H);
+    const lg = g.createLinearGradient(0, 0, W * 0.6, H);
+    p.stops.forEach((c, i) => lg.addColorStop(i / (p.stops.length - 1), c));
+    g.fillStyle = lg; g.fillRect(0, 0, W, H);
+    if (s.image) {
+      const im = s.image, r = Math.max(W / im.width, H / im.height), w = im.width * r, h = im.height * r;
+      g.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
+      const ov = g.createLinearGradient(0, 0, 0, H);
+      ov.addColorStop(0, 'rgba(5,8,20,.62)'); ov.addColorStop(0.5, 'rgba(5,8,20,.48)'); ov.addColorStop(1, 'rgba(5,8,20,.72)');
+      g.fillStyle = ov; g.fillRect(0, 0, W, H);
+    }
+    // vignette
+    const vg = g.createRadialGradient(W / 2, H * 0.48, H * 0.25, W / 2, H * 0.5, H * 0.78);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, p.light ? 'rgba(90,60,30,.16)' : 'rgba(0,0,0,.42)');
+    g.fillStyle = vg; g.fillRect(0, 0, W, H);
+    // grain léger (rendu « film », moins plat)
+    const n = document.createElement('canvas'); n.width = n.height = 160;
+    const nx = n.getContext('2d'), id = nx.createImageData(160, 160);
+    for (let i = 0; i < id.data.length; i += 4) { const v = Math.random() * 255; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 10; }
+    nx.putImageData(id, 0, 0);
+    g.fillStyle = g.createPattern(n, 'repeat'); g.fillRect(0, 0, W, H);
+  }
+
+  wrap(text, font, maxW) {
+    const g = this.ctx; g.font = font;
+    const words = text.split(/\s+/).filter(Boolean), lines = []; let cur = '';
+    for (const w of words) {
+      const t = cur ? cur + ' ' + w : w;
+      if (g.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; }
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  layoutAll() {
+    const CW = 920, PX = 64, PY = 50, maxW = CW - PX * 2;
+    this.layouts = this.s.timeline.items.map(it => {
+      let ru, size = 80;
+      for (; size >= 48; size -= 4) { ru = this.wrap(it.text, `600 ${size}px ${FONT}`, maxW); if (ru.length <= 4) break; }
+      const frSize = Math.max(34, Math.round(size * 0.56));
+      const fr = it.translation ? this.wrap(it.translation, `italic 400 ${frSize}px ${FONT}`, maxW) : [];
+      const ruLH = Math.round(size * 1.2), frLH = Math.round(frSize * 1.3);
+      const h = PY + 44 + 26 + ru.length * ruLH + (fr.length ? 28 + fr.length * frLH : 0) + PY;
+      return { it, ru, fr, size, frSize, ruLH, frLH, h, CW, PX, PY };
+    });
+    const titleMax = 940;
+    this.titleLines = this.wrap(this.s.meta.titleRu || '', `700 124px ${SERIF}`, titleMax);
+    this.titleSize = 124;
+    if (this.titleLines.length > 2) { this.titleSize = 92; this.titleLines = this.wrap(this.s.meta.titleRu, `700 92px ${SERIF}`, titleMax); }
+  }
+
+  rr(x, y, w, h, r) {
+    const g = this.ctx; g.beginPath();
+    g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+  }
+
+  text(str, x, y, font, color, align = 'center') {
+    const g = this.ctx; g.font = font; g.fillStyle = color; g.textAlign = align; g.fillText(str, x, y);
+  }
+
+  level(t) { const e = this.s.env; if (!e) return 0.6 + 0.4 * Math.sin(t * 9); return e[Math.min(e.length - 1, Math.max(0, Math.floor(t * Timeline.FPS_ENV)))] || 0; }
+
+  draw(t) {
+    const g = this.ctx, s = this.s, p = this.p, tl = s.timeline;
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    g.drawImage(this.bg, 0, 0);
+    // lueurs animées
+    g.globalCompositeOperation = p.light ? 'source-over' : 'lighter';
+    const ga = s.image ? 0.10 : (p.light ? 0.35 : 0.22);
+    [[0.25, 0.28, 0.07, p.glow[0]], [0.78, 0.7, 0.05, p.glow[1]]].forEach(([fx, fy, sp, col], i) => {
+      const x = W * fx + Math.sin(t * sp * 6 + i * 2) * 120, y = H * fy + Math.cos(t * sp * 5 + i) * 160, r = 620;
+      const rg = g.createRadialGradient(x, y, 0, x, y, r);
+      rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(0,0,0,0)');
+      g.globalAlpha = ga; g.fillStyle = rg; g.fillRect(x - r, y - r, r * 2, r * 2);
+    });
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+
+    const introA = 1 - clamp01((t - (tl.introEnd - 0.5)) / 0.5);
+    const outroA = clamp01((t - tl.outroStart) / 0.6);
+    const dlgA = (1 - introA) * (1 - outroA);
+    if (introA > 0.001) this.drawIntro(t, introA);
+    if (dlgA > 0.001) this.drawDialogue(t, dlgA);
+    if (outroA > 0.001) this.drawOutro(t - tl.outroStart, outroA);
+    g.globalAlpha = 1;
+  }
+
+  pill(label, cx, cy, font, fg, bg, padX = 28, h = 64) {
+    const g = this.ctx; g.font = font; const w = g.measureText(label).width + padX * 2;
+    g.fillStyle = bg; this.rr(cx - w / 2, cy - h / 2, w, h, h / 2); g.fill();
+    g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(label, cx, cy + 1); g.textBaseline = 'alphabetic';
+  }
+
+  drawIntro(t, A) {
+    const g = this.ctx, p = this.p, m = this.s.meta;
+    const stg = (d) => { const k = ease((t - d) / 0.7); return { a: k * A, dy: (1 - k) * 40 }; };
+    let k = stg(0.1); g.globalAlpha = k.a;
+    this.pill(`${m.langNative} · ${m.level || 'A1'}`, W / 2, 660 + k.dy, `600 34px ${FONT}`, p.light ? '#fff' : '#0b1020', p.accM);
+    k = stg(0.25); g.globalAlpha = k.a;
+    let y = 800 + k.dy;
+    this.titleLines.forEach(l => { y += this.titleSize * 0.95; this.text(l, W / 2, y, `700 ${this.titleSize}px ${SERIF}`, p.text); y += this.titleSize * 0.15; });
+    k = stg(0.45); g.globalAlpha = k.a;
+    y += 30 + k.dy;
+    g.fillStyle = p.accF; g.fillRect(W / 2 - 50, y, 100, 5);
+    y += 90;
+    if (m.titleFr) this.text(m.titleFr, W / 2, y, `italic 500 64px ${SERIF}`, p.text);
+    k = stg(0.65); g.globalAlpha = k.a;
+    if (m.place) this.text(m.place, W / 2, y + 80 + k.dy, `500 40px ${FONT}`, p.muted);
+    this.text(m.subtitle, W / 2, 1420 + k.dy, `500 36px ${FONT}`, p.muted);
+    if (m.handle) this.text(m.handle, W / 2, 1480 + k.dy, `600 34px ${FONT}`, p.muted);
+    g.globalAlpha = 1;
+  }
+
+  drawHeader(A) {
+    const g = this.ctx, p = this.p, m = this.s.meta; g.globalAlpha = A;
+    if (m.handle) this.text(m.handle, W / 2, 200, `600 30px ${FONT}`, p.muted);
+    this.text(m.titleRu || '', W / 2, 280, `700 64px ${SERIF}`, p.text);
+    if (m.titleFr) this.text(m.titleFr, W / 2, 335, `italic 500 36px ${SERIF}`, p.muted);
+    g.fillStyle = p.bar; g.fillRect(W / 2 - 40, 372, 80, 3);
+  }
+
+  drawFooter(t, A, idx) {
+    const g = this.ctx, p = this.p, tl = this.s.timeline, n = tl.items.length;
+    const x = 160, w = W - 320, y = 1500;
+    const prog = clamp01((t - tl.introEnd) / (tl.dialogueEnd - tl.introEnd));
+    g.globalAlpha = A; g.fillStyle = p.bar; this.rr(x, y, w, 8, 4); g.fill();
+    const grd = g.createLinearGradient(x, 0, x + w, 0); grd.addColorStop(0, p.accM); grd.addColorStop(1, p.accF);
+    g.fillStyle = grd; this.rr(x, y, Math.max(8, w * prog), 8, 4); g.fill();
+    this.text(`${Math.max(1, idx + 1)} / ${n}`, x, y + 56, `600 30px ${FONT}`, p.muted, 'left');
+    this.text(`${this.s.meta.langLabel} · ${this.s.meta.level || 'A1'}`, x + w, y + 56, `500 30px ${FONT}`, p.muted, 'right');
+  }
+
+  drawCard(L, cx, cy, alpha, scale, active, t) {
+    if (alpha <= 0.003) return;
+    const g = this.ctx, p = this.p, it = L.it, acc = it.speaker === 'M' ? p.accM : p.accF;
+    const w = L.CW, h = L.h, x = -w / 2, y = -h / 2;
+    g.save(); g.globalAlpha = alpha; g.translate(cx, cy); g.scale(scale, scale);
+    g.fillStyle = p.shadow; this.rr(x + 6, y + 22, w - 12, h, 40); g.fill();
+    g.fillStyle = p.card; this.rr(x, y, w, h, 40); g.fill();
+    g.lineWidth = 2; g.strokeStyle = active ? acc : p.cardStroke;
+    if (active) g.globalAlpha = alpha * (0.55 + 0.45 * this.level(t)); g.stroke(); g.globalAlpha = alpha;
+    // pastille + nom
+    const name = (it.speaker === 'M' ? this.s.meta.nameM : this.s.meta.nameF) || (it.speaker === 'M' ? 'M' : 'F');
+    let ny = y + L.PY + 22;
+    g.fillStyle = acc; g.beginPath(); g.arc(x + L.PX + 10, ny, 10, 0, Math.PI * 2); g.fill();
+    g.font = `700 34px ${FONT}`; g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillStyle = acc;
+    g.fillText(name, x + L.PX + 34, ny + 1);
+    const nameW = g.measureText(name).width;
+    // égaliseur qui suit la voix réelle
+    const speaking = active && t >= it.start && t <= it.end;
+    const lv = speaking ? this.level(t) : 0;
+    for (let i = 0; i < 4; i++) {
+      const bh = 6 + (speaking ? lv * 26 * (0.55 + 0.45 * Math.abs(Math.sin(t * 11 + i * 1.9))) : 0);
+      g.fillRect(x + L.PX + 34 + nameW + 22 + i * 11, ny - bh / 2, 6, bh);
+    }
+    g.textBaseline = 'alphabetic';
+    // texte cible
+    let ty = ny + 26 + 22;
+    g.fillStyle = p.text; g.font = `600 ${L.size}px ${FONT}`;
+    L.ru.forEach(l => { ty += L.ruLH; g.fillText(l, x + L.PX, ty - L.ruLH * 0.22); });
+    if (L.fr.length) {
+      ty += 28; g.fillStyle = p.muted; g.font = `italic 400 ${L.frSize}px ${FONT}`;
+      L.fr.forEach(l => { ty += L.frLH; g.fillText(l, x + L.PX, ty - L.frLH * 0.25); });
+    }
+    g.restore();
+  }
+
+  drawDialogue(t, A) {
+    const g = this.ctx, tl = this.s.timeline, items = tl.items;
+    this.drawHeader(A);
+    let idx = -1;
+    for (let i = 0; i < items.length; i++) if (t >= items[i].dispStart) idx = i;
+    this.drawFooter(t, A, idx);
+    if (idx < 0) return;
+    const MAIN = 1010, GAP = 36, GS = 0.8, GA = 0.42, TOP = 420;
+    const k = ease((t - items[idx].dispStart) / 0.45);
+    const Lc = this.layouts[idx];
+    g.save(); g.beginPath(); g.rect(0, TOP - 20, W, H); g.clip();
+    const fadeTop = (cy, h, a) => { const top = cy - h / 2; return top < TOP + 10 ? a * clamp01(1 - (TOP + 10 - top) / 180) : a; };
+    if (this.s.showPrev) {
+      const Lp = this.layouts[idx - 1], Lpp = this.layouts[idx - 2];
+      if (Lp) {
+        const ghostCy = MAIN - Lc.h / 2 - GAP - (Lp.h * GS) / 2;
+        const cy = MAIN + (ghostCy - MAIN) * k, sc = 1 + (GS - 1) * k, a = 1 + (GA - 1) * k;
+        this.drawCard(Lp, W / 2, cy, fadeTop(cy, Lp.h * sc, a * A), sc, false, t);
+        if (Lpp) {
+          const from = MAIN - Lp.h / 2 - GAP - (Lpp.h * GS) / 2, to = ghostCy - Lp.h * GS / 2 - GAP - (Lpp.h * GS) / 2;
+          const cy2 = from + (to - from) * k;
+          this.drawCard(Lpp, W / 2, cy2, fadeTop(cy2, Lpp.h * GS, GA * (1 - k) * A), GS, false, t);
+        }
+      }
+    } else if (this.layouts[idx - 1]) {
+      this.drawCard(this.layouts[idx - 1], W / 2, MAIN - 60 * k, (1 - k) * A, 1, false, t);
+    }
+    this.drawCard(Lc, W / 2, MAIN + (1 - k) * 90, k * A, 0.96 + 0.04 * k, true, t);
+    g.restore();
+  }
+
+  drawOutro(t, A) {
+    const g = this.ctx, p = this.p, m = this.s.meta;
+    const stg = d => { const k = ease((t - d) / 0.7); return { a: k * A, dy: (1 - k) * 40 }; };
+    let k = stg(0.1); g.globalAlpha = k.a;
+    this.text(m.thanks, W / 2, 820 + k.dy, `700 140px ${SERIF}`, p.text);
+    k = stg(0.3); g.globalAlpha = k.a;
+    this.text('Merci d\'avoir regardé !', W / 2, 920 + k.dy, `italic 500 58px ${SERIF}`, p.muted);
+    k = stg(0.5); g.globalAlpha = k.a;
+    if (m.endText) {
+      const lines = this.wrap(m.endText, `500 42px ${FONT}`, 860);
+      lines.forEach((l, i) => this.text(l, W / 2, 1060 + i * 56 + k.dy, `500 42px ${FONT}`, p.text));
+    }
+    k = stg(0.7); g.globalAlpha = k.a;
+    if (m.handle) this.pill(m.handle, W / 2, 1250 + k.dy, `700 40px ${FONT}`, p.light ? '#fff' : '#0b1020', p.accF, 36, 80);
+    g.globalAlpha = 1;
+  }
+}
+
+/* ---------- Enregistrement vidéo (MediaRecorder natif) ---------- */
+const Recorder = {
+  pickMime() {
+    if (!window.MediaRecorder) return null;
+    const list = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a', 'video/mp4',
+                  'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    for (const m of list) { try { if (MediaRecorder.isTypeSupported(m)) return m; } catch {} }
+    return '';
+  },
+  async record({ canvas, renderer, audioBuffer, total, listen, onProgress, signal }) {
+    const mime = this.pickMime();
+    if (mime === null || !canvas.captureStream) throw new UserError('Ce navigateur ne sait pas enregistrer de vidéo. Utilise Safari à jour sur iPad (iPadOS 15 ou plus).');
+    const ctx = AudioEngine.get(); if (ctx.state !== 'running') await ctx.resume();
+    const vStream = canvas.captureStream(30);
+    const dest = ctx.createMediaStreamDestination();
+    const stream = new MediaStream([...vStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+    const opts = { videoBitsPerSecond: 8_000_000, audioBitsPerSecond: 128_000 }; if (mime) opts.mimeType = mime;
+    let rec; try { rec = new MediaRecorder(stream, opts); } catch { rec = new MediaRecorder(stream); }
+    const chunks = [];
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    const stopped = new Promise(res => { rec.onstop = res; });
+    let wake = null; try { wake = await navigator.wakeLock?.request('screen'); } catch {}
+    renderer.draw(0);
+    // On attend le vrai démarrage de l'enregistreur pour que le .srt reste synchronisé.
+    await Promise.race([new Promise(res => { rec.onstart = res; rec.start(); }), sleep(1000)]);
+    const src = ctx.createBufferSource(); src.buffer = audioBuffer; src.connect(dest);
+    let mon = null; if (listen) { mon = ctx.createGain(); mon.gain.value = 1; src.connect(mon); mon.connect(ctx.destination); }
+    const t0 = ctx.currentTime + 0.05; src.start(t0);
+    await new Promise(res => {
+      const tick = () => {
+        const t = ctx.currentTime - t0;
+        renderer.draw(Math.max(0, Math.min(total, t)));
+        onProgress && onProgress(clamp01(t / total), t);
+        if (t >= total + 0.25 || signal.aborted) return res();
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    try { src.stop(); } catch {} src.disconnect(); if (mon) mon.disconnect();
+    rec.stop(); await stopped;
+    vStream.getTracks().forEach(t => t.stop());
+    try { wake && wake.release(); } catch {}
+    if (signal.aborted) throw new UserError('Export annulé.');
+    const type = (rec.mimeType || mime || 'video/mp4').split(';')[0];
+    const blob = new Blob(chunks, { type });
+    if (!blob.size) throw new UserError('La vidéo enregistrée est vide. Réessaie en gardant la page au premier plan.');
+    return { blob, ext: type.includes('mp4') ? 'mp4' : 'webm' };
+  },
+};
+
+/* ---------- Exports : WAV, MP3, SRT, téléchargement ---------- */
+const Exports = {
+  LAME_URL: 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js',
+  wav(samples, sr) {
+    const b = new ArrayBuffer(44 + samples.length * 2), v = new DataView(b);
+    const w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    w(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true);
+    v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, samples.length * 2, true);
+    for (let i = 0; i < samples.length; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, samples[i])) * 0x7fff, true);
+    return new Blob([b], { type: 'audio/wav' });
+  },
+  async mp3(samples, sr) {
+    if (!window.lamejs) await loadScript(this.LAME_URL);
+    const enc = new lamejs.Mp3Encoder(1, sr, 128), out = [], N = 1152, pcm = new Int16Array(samples.length);
+    for (let i = 0; i < samples.length; i++) pcm[i] = Math.max(-1, Math.min(1, samples[i])) * 0x7fff;
+    for (let i = 0; i < pcm.length; i += N) { const d = enc.encodeBuffer(pcm.subarray(i, i + N)); if (d.length) out.push(new Uint8Array(d)); }
+    const f = enc.flush(); if (f.length) out.push(new Uint8Array(f));
+    return new Blob(out, { type: 'audio/mpeg' });
+  },
+  srtTime(t) {
+    const ms = Math.max(0, Math.round(t * 1000)), h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, s = Math.floor(ms / 1000) % 60;
+    const z = (n, l = 2) => String(n).padStart(l, '0');
+    return `${z(h)}:${z(m)}:${z(s)},${z(ms % 1000, 3)}`;
+  },
+  srt(tl, withFr, offset = 0) {
+    return tl.items.map((it, i) => `${i + 1}\n${this.srtTime(it.start - offset)} --> ${this.srtTime(Math.min(it.dispEnd, it.end + 0.6) - offset)}\n${it.text}${withFr && it.translation ? '\n' + it.translation : ''}\n`).join('\n');
+  },
+  download(blob, name) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  },
+  slug(s) { return (s || 'dialogue').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9а-яё]+/gi, '-').replace(/^-|-$/g, '') || 'dialogue'; },
+};
+
+/* ---------- Interface ---------- */
+const UI = {
+  el: id => document.getElementById(id),
+  project: null,     // { timeline, audioBuffer, mix, sig }
+  video: null,       // { blob, ext }
+  image: null,
+  playing: null,
+
+  init() {
+    const $ = this.el;
+    this.renderer = new VideoRenderer($('stage'));
+    // langues
+    Object.entries(LANGS).forEach(([k, v]) => $('lang').add(new Option(v.label, k)));
+    EXAMPLES.forEach(e => $('examples').add(new Option(`${e.titleRu} — ${e.titleFr}`, e.id)));
+    Object.entries(THEMES).forEach(([k, v]) => {
+      const b = document.createElement('button'); b.className = 'swatch'; b.title = v.label; b.dataset.theme = k; b.setAttribute('aria-label', v.label);
+      b.style.background = `linear-gradient(135deg, ${v.stops.join(',')})`; $('swatches').appendChild(b);
+    });
+    // réglages mémorisés (sauf la clé, gérée à part)
+    const st = Store.get('settings', {});
+    const fields = ['titleRu', 'titleFr', 'place', 'nameM', 'nameF', 'dialogue', 'rate', 'pause', 'level', 'engine', 'handle', 'endText', 'solid', 'lang'];
+    fields.forEach(f => { if (st[f] !== undefined) $(f).value = st[f]; });
+    ['showPrev', 'listen', 'srtFr'].forEach(f => { if (st[f] !== undefined) $(f).checked = st[f]; });
+    this.theme = st.theme || 'nuit';
+    this.fillVoices(st.voiceM, st.voiceF);
+    $('azRegion').value = Store.get('region', '');
+    const savedKey = Store.get('key', '');
+    if (savedKey) { $('azKey').value = savedKey; $('azRemember').checked = true; }
+    if (!$('dialogue').value.trim()) this.loadExample('cafe');
+
+    const save = () => {
+      const o = {}; fields.forEach(f => o[f] = $(f).value); ['showPrev', 'listen', 'srtFr'].forEach(f => o[f] = $(f).checked);
+      o.theme = this.theme; o.voiceM = $('voiceM').value; o.voiceF = $('voiceF').value; Store.set('settings', o);
+    };
+    document.querySelectorAll('input,select,textarea').forEach(n => n.addEventListener('change', save));
+    let deb; const live = () => { clearTimeout(deb); deb = setTimeout(() => { this.updateInfo(); this.refreshScene(); }, 250); };
+    ['dialogue', 'titleRu', 'titleFr', 'place', 'nameM', 'nameF', 'handle', 'endText', 'level', 'pause', 'solid'].forEach(f => $(f).addEventListener('input', live));
+    $('showPrev').addEventListener('change', live);
+    $('lang').addEventListener('change', () => { this.fillVoices(); save(); live(); });
+    $('rate').addEventListener('input', () => $('rateOut').textContent = `${$('rate').value > 0 ? '+' : ''}${$('rate').value} %`);
+    $('pause').addEventListener('input', () => $('pauseOut').textContent = `${String($('pause').value).replace('.', ',')} s`);
+    $('rate').dispatchEvent(new Event('input')); $('pause').dispatchEvent(new Event('input'));
+    $('solid').addEventListener('input', () => { this.theme = 'uni'; this.markTheme(); save(); });
+    $('swatches').addEventListener('click', e => { const b = e.target.closest('.swatch'); if (!b) return; this.theme = b.dataset.theme; this.markTheme(); save(); live(); });
+    this.markTheme();
+    $('examples').addEventListener('change', e => { if (e.target.value) { this.loadExample(e.target.value); save(); live(); } });
+
+    // clé
+    $('azKey').addEventListener('change', () => { if ($('azRemember').checked) Store.set('key', $('azKey').value.trim()); });
+    $('azRegion').addEventListener('change', () => { $('azRegion').value = $('azRegion').value.trim().toLowerCase().replace(/\s+/g, ''); Store.set('region', $('azRegion').value); });
+    $('azRemember').addEventListener('change', e => { if (e.target.checked) Store.set('key', $('azKey').value.trim()); else Store.del('key'); });
+    $('btnForgetKey').addEventListener('click', () => { $('azKey').value = ''; $('azRemember').checked = false; Store.del('key'); this.status('keyStatus', 'Clé effacée de cet appareil.', 'ok'); });
+    $('btnTestKey').addEventListener('click', () => this.testKey());
+
+    // image de fond
+    $('btnPickImg').addEventListener('click', () => $('bgFile').click());
+    $('bgFile').addEventListener('change', e => this.loadImage(e.target.files[0]));
+    $('btnClearImg').addEventListener('click', () => { this.image = null; $('bgFile').value = ''; this.refreshScene(); });
+
+    // actions
+    $('btnGen').addEventListener('click', () => { AudioEngine.unlock(); this.generate(); });
+    $('btnPlay').addEventListener('click', () => { AudioEngine.unlock(); this.togglePlay(); });
+    $('btnExport').addEventListener('click', () => { AudioEngine.unlock(); this.exportVideo(); });
+    $('seek').addEventListener('input', () => { this.stopPlay(); this.drawAt(+$('seek').value); });
+    $('dlVideo').addEventListener('click', () => this.video && Exports.download(this.video.blob, `${this.fileBase()}.${this.video.ext}`));
+    $('shareVideo').addEventListener('click', () => this.shareVideo());
+    $('dlMp3').addEventListener('click', () => this.downloadMp3());
+    $('dlSrt').addEventListener('click', () => this.downloadSrt());
+    $('btnClearCache').addEventListener('click', async () => { await AudioCache.clear(); this.status('mainStatus', 'Cache audio vidé.', 'ok'); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && this.exporting) this.hiddenDuringExport = true; });
+
+    const mime = Recorder.pickMime();
+    $('fmtInfo').textContent = mime === null ? 'enregistrement vidéo non disponible' : (mime || 'format par défaut du navigateur').split(';')[0].replace('video/', '').toUpperCase();
+    this.showUsage(); this.updateInfo();
+    this.fontsReady().then(() => this.refreshScene());
+  },
+
+  async fontsReady() {
+    if (!document.fonts) return;
+    const ps = ['600 80px Inter', 'italic 400 40px Inter', '700 34px Inter', '700 120px "Playfair Display"', 'italic 500 60px "Playfair Display"']
+      .map(f => document.fonts.load(f, 'Привет Àé'));
+    await Promise.race([Promise.all(ps).catch(() => {}), sleep(4000)]);
+  },
+
+  status(id, msg, kind = '') { const n = this.el(id); n.textContent = msg; n.className = 'status show ' + kind; },
+  clearStatus(id) { this.el(id).className = 'status'; },
+  progress(v) { const p = this.el('prog'); if (v === null) { p.classList.remove('show'); return; } p.classList.add('show'); p.firstElementChild.style.width = `${Math.round(v * 100)}%`; },
+  showUsage() { const u = Usage.get(); this.el('usage').textContent = `Estimation ce mois-ci : ${u.toLocaleString('fr-FR')} / 500 000 caractères.`; },
+  markTheme() { document.querySelectorAll('.swatch').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.theme === this.theme))); },
+  fileBase() { return Exports.slug(this.el('titleFr').value || this.el('titleRu').value); },
+
+  fillVoices(selM, selF) {
+    const L = LANGS[this.el('lang').value] || LANGS['ru-RU'], extra = this.liveVoices && this.liveVoices[this.el('lang').value];
+    for (const sp of ['M', 'F']) {
+      const sel = this.el('voice' + sp), cur = (sp === 'M' ? selM : selF) || sel.value;
+      sel.innerHTML = '';
+      const names = new Set(L.voices[sp]);
+      if (extra) extra.filter(v => v.Gender === (sp === 'M' ? 'Male' : 'Female')).forEach(v => names.add(v.ShortName));
+      names.forEach(n => sel.add(new Option(n.replace(/^[a-z]{2}-[A-Z]{2}-/, '').replace('Neural', ''), n)));
+      if ([...names].includes(cur)) sel.value = cur;
+    }
+  },
+
+  loadExample(id) {
+    const e = EXAMPLES.find(x => x.id === id); if (!e) return;
+    ['titleRu', 'titleFr', 'place', 'nameM', 'nameF'].forEach(f => this.el(f).value = e[f]);
+    this.el('dialogue').value = e.text; this.el('lang').value = 'ru-RU'; this.fillVoices();
+  },
+
+  creds() { return { key: this.el('azKey').value.trim(), region: this.el('azRegion').value.trim().toLowerCase() }; },
+
+  async testKey() {
+    const c = this.creds();
+    try {
+      AzureTTS.checkCreds(c);
+      this.status('keyStatus', 'Test en cours…');
+      const voices = await AzureTTS.listVoices(c);
+      this.liveVoices = {};
+      voices.forEach(v => (this.liveVoices[v.Locale] = this.liveVoices[v.Locale] || []).push(v));
+      const lang = this.el('lang').value, here = (this.liveVoices[lang] || []).map(v => v.ShortName);
+      const wanted = [...LANGS[lang].voices.M, ...LANGS[lang].voices.F], missing = wanted.filter(v => !here.includes(v));
+      this.fillVoices();
+      if (this.el('azRemember').checked) Store.set('key', c.key);
+      Store.set('region', c.region);
+      this.status('keyStatus', `✓ Clé valide. ${voices.length} voix disponibles, dont ${here.length} pour ${LANGS[lang].label.toLowerCase()} : ${here.map(v => v.split('-').pop().replace('Neural', '')).join(', ')}.` +
+        (missing.length ? `\n⚠ Voix absentes dans ta région : ${missing.join(', ')}.` : ''), missing.length ? 'warn' : 'ok');
+    } catch (e) { this.status('keyStatus', e.message || String(e), 'err'); }
+  },
+
+  updateInfo() {
+    const { lines, errors } = DialogueParser.parse(this.el('dialogue').value);
+    const chars = lines.reduce((s, l) => s + l.text.length, 0);
+    const est = lines.reduce((s, l) => s + this.estDur(l.text), 0) + lines.length * +this.el('pause').value + Timeline.INTRO + Timeline.OUTRO;
+    this.el('linesInfo').innerHTML = `${lines.length} répliques · ${chars} caractères à synthétiser · durée ≈ ${Math.round(est)} s` +
+      (errors.length ? `<br><span style="color:var(--err)">${errors.slice(0, 3).map(e => e.replace(/</g, '&lt;')).join('<br>')}</span>` : '');
+    return { lines, errors };
+  },
+  estDur(text) { return 0.5 + text.length * 0.075 * (1 - +this.el('rate').value / 100); },
+
+  meta() {
+    const L = LANGS[this.el('lang').value] || LANGS['ru-RU'], v = f => this.el(f).value.trim();
+    return { titleRu: v('titleRu'), titleFr: v('titleFr'), place: v('place'), nameM: v('nameM'), nameF: v('nameF'), handle: v('handle'),
+             endText: v('endText'), level: v('level'), langNative: L.native, langLabel: L.label.replace(/\s*\(.*\)/, ''), thanks: L.thanks, subtitle: L.subtitle + ' · avec traduction' };
+  },
+
+  // Signature de ce qui exige une nouvelle synthèse
+  audioSig(lines) { return JSON.stringify([this.el('lang').value, this.el('voiceM').value, this.el('voiceF').value, +this.el('rate').value, lines.map(l => [l.speaker, l.text])]); },
+
+  // Recalcule la scène (texte/apparence). Réutilise l'audio si les répliques n'ont pas changé.
+  refreshScene() {
+    const { lines } = DialogueParser.parse(this.el('dialogue').value);
+    const pause = +this.el('pause').value;
+    let tl, env = null;
+    const pr = this.project;
+    if (pr && pr.sig === this.audioSig(lines)) {
+      tl = Timeline.build(pr.segs.map((s, i) => ({ ...s, line: lines[i] })), { pause, sampleRate: pr.sampleRate });
+      if (!pr.timeline || pr.timeline.total !== tl.total || pr.pause !== pause) { pr.mix = Timeline.mix(tl); pr.audioBuffer = this.toBuffer(pr.mix, pr.sampleRate); pr.env = Timeline.envelope(pr.mix, pr.sampleRate); pr.pause = pause; }
+      pr.timeline = tl; env = pr.env; this.setReady(true);
+    } else {
+      tl = Timeline.build(lines.map(l => ({ line: l, samples: null, dur: this.estDur(l.text) })), { pause, sampleRate: 24000 });
+      this.setReady(false);
+    }
+    this.renderer.setScene({ timeline: tl, env, meta: this.meta(), theme: this.theme, solid: this.el('solid').value, image: this.image, showPrev: this.el('showPrev').checked });
+    const sk = this.el('seek'); sk.max = tl.total.toFixed(2);
+    if (+sk.value > tl.total) sk.value = 0;
+    if (!this.playing && !this.exporting) this.drawAt(+sk.value || Math.min(tl.items.length ? tl.items[Math.min(2, tl.items.length - 1)].start + 0.6 : 1.5, tl.total), true);
+  },
+
+  drawAt(t, keepSeek) {
+    this.renderer.draw(t);
+    if (!keepSeek) this.el('seek').value = t;
+    const s = Math.floor(t); this.el('timeOut').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  },
+
+  setReady(ok) { ['dlMp3', 'dlSrt'].forEach(id => this.el(id).disabled = !ok); },
+  toBuffer(mix, sr) { const ab = AudioEngine.get().createBuffer(1, Math.max(1, mix.length), sr); ab.getChannelData(0).set(mix); return ab; },
+
+  busy(on) { ['btnGen', 'btnExport', 'btnTestKey'].forEach(id => this.el(id).disabled = on); this.isBusy = on; },
+
+  async generate() {
+    if (this.isBusy) return null;
+    const { lines, errors } = this.updateInfo();
+    try {
+      if (errors.length) throw new UserError('Corrige d\'abord le dialogue :\n' + errors.slice(0, 3).join('\n'));
+      if (!lines.length) throw new UserError('Le dialogue est vide.');
+      const sig = this.audioSig(lines);
+      if (this.project && this.project.sig === sig) { this.refreshScene(); this.status('mainStatus', '✓ Audio déjà prêt.', 'ok'); return this.project; }
+      const c = this.creds(); AzureTTS.checkCreds(c);
+      this.busy(true); this.stopPlay();
+      const lang = this.el('lang').value, rate = +this.el('rate').value, engine = this.el('engine').value;
+      const segs = []; let fresh = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const l = lines[i], voice = this.el(l.speaker === 'M' ? 'voiceM' : 'voiceF').value;
+        this.status('mainStatus', `Synthèse ${i + 1}/${lines.length} : « ${l.text.slice(0, 40)} »`);
+        this.progress(i / lines.length);
+        const { buf, cached } = await AzureTTS.synthesize(c, { text: l.text, voice, lang, rate }, {
+          engine, onWait: s => this.status('mainStatus', `Limite gratuite d'Azure (20 requêtes/min) : pause de ${s} s, ça reprend tout seul…`, 'warn') });
+        if (!cached) fresh++;
+        const ab = await AudioEngine.decode(buf);
+        const samples = AudioEngine.trim(ab);
+        segs.push({ samples, dur: samples.length / ab.sampleRate });
+      }
+      const sr = AudioEngine.get().sampleRate;
+      this.project = { sig, segs, sampleRate: sr };
+      this.video = null; ['dlVideo', 'shareVideo'].forEach(id => this.el(id).disabled = true); this.el('result').style.display = 'none';
+      this.refreshScene();
+      this.progress(null);
+      this.status('mainStatus', `✓ Audio prêt (${lines.length} répliques, ${Math.round(this.project.timeline.total)} s). ${fresh} nouvelle(s) synthèse(s), ${lines.length - fresh} depuis le cache.`, 'ok');
+      return this.project;
+    } catch (e) {
+      this.progress(null); this.status('mainStatus', e.message || String(e), 'err'); console.error(e); return null;
+    } finally { this.busy(false); }
+  },
+
+  async togglePlay() {
+    if (this.playing) return this.stopPlay();
+    const pr = await this.generate(); if (!pr) return;
+    const ctx = AudioEngine.get(); if (ctx.state !== 'running') await ctx.resume();
+    const tl = pr.timeline, off = +this.el('seek').value >= tl.total - 0.1 ? 0 : +this.el('seek').value;
+    const src = ctx.createBufferSource(); src.buffer = pr.audioBuffer; src.connect(ctx.destination);
+    const t0 = ctx.currentTime + 0.05 - off; src.start(ctx.currentTime + 0.05, off);
+    this.playing = { src }; this.el('btnPlay').textContent = '■ Stop';
+    const tick = () => {
+      if (!this.playing || this.playing.src !== src) return;
+      const t = ctx.currentTime - t0;
+      if (t >= tl.total) { this.stopPlay(); this.drawAt(tl.total); return; }
+      this.drawAt(Math.max(0, t)); requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    src.onended = () => { if (this.playing && this.playing.src === src) this.stopPlay(); };
+  },
+  stopPlay() {
+    if (!this.playing) return;
+    try { this.playing.src.stop(); } catch {}
+    this.playing = null; this.el('btnPlay').textContent = '▶ Aperçu';
+  },
+
+  async exportVideo() {
+    if (this.exporting) { this.abort && this.abort.abort(); return; }
+    const pr = await this.generate(); if (!pr) return;
+    this.stopPlay(); this.exporting = true; this.hiddenDuringExport = false;
+    this.busy(true); const b = this.el('btnExport'); b.disabled = false; b.textContent = '■ Annuler l\'export';
+    this.abort = new AbortController();
+    try {
+      await this.fontsReady(); this.refreshScene();
+      const total = pr.timeline.total;
+      this.status('mainStatus', 'Enregistrement de la vidéo… garde cette page ouverte et l\'écran allumé.');
+      const res = await Recorder.record({ canvas: this.el('stage'), renderer: this.renderer, audioBuffer: pr.audioBuffer, total,
+        listen: this.el('listen').checked, signal: this.abort.signal,
+        onProgress: (p, t) => { this.progress(p); this.drawAtLabel(t); } });
+      this.video = res;
+      const v = this.el('result'); if (v.src) URL.revokeObjectURL(v.src); v.src = URL.createObjectURL(res.blob); v.style.display = 'block';
+      this.el('dlVideo').disabled = false; this.el('shareVideo').disabled = !(navigator.canShare);
+      const mb = (res.blob.size / 1048576).toFixed(1);
+      this.status('mainStatus', `✓ Vidéo prête (${res.ext.toUpperCase()}, ${mb} Mo). Vérifie-la ci-dessous puis télécharge-la ou partage-la.` +
+        (this.hiddenDuringExport ? '\n⚠ La page a été masquée pendant l\'export : la vidéo peut être saccadée. Recommence si besoin.' : '') +
+        (res.ext !== 'mp4' ? '\nℹ Ce navigateur produit du WebM. Sur iPad avec Safari, tu obtiendras du MP4.' : ''), this.hiddenDuringExport ? 'warn' : 'ok');
+    } catch (e) { this.status('mainStatus', e.message || String(e), 'err'); console.error(e); }
+    finally { this.exporting = false; this.progress(null); this.busy(false); b.textContent = '● Créer la vidéo'; }
+  },
+  drawAtLabel(t) { const s = Math.max(0, Math.floor(t)); this.el('timeOut').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; this.el('seek').value = t; },
+
+  async shareVideo() {
+    if (!this.video) return;
+    const file = new File([this.video.blob], `${this.fileBase()}.${this.video.ext}`, { type: this.video.blob.type });
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: this.el('titleRu').value });
+      else this.status('mainStatus', 'Le partage direct n\'est pas disponible ici : utilise « Télécharger la vidéo ».', 'warn');
+    } catch (e) { if (e.name !== 'AbortError') this.status('mainStatus', 'Partage impossible : ' + e.message, 'err'); }
+  },
+
+  async downloadMp3() {
+    const pr = this.project; if (!pr || !pr.timeline) return;
+    const tl = pr.timeline, from = Math.max(0, tl.items[0].start - 0.4), to = tl.dialogueEnd;
+    const samples = Timeline.mix(tl, { from, to });
+    try {
+      this.status('mainStatus', 'Encodage MP3…');
+      const blob = await Exports.mp3(samples, pr.sampleRate);
+      Exports.download(blob, `${this.fileBase()}.mp3`); this.status('mainStatus', '✓ MP3 prêt (dialogue seul, sans écran titre).', 'ok');
+    } catch (e) {
+      console.error(e);
+      Exports.download(Exports.wav(samples, pr.sampleRate), `${this.fileBase()}.wav`);
+      this.status('mainStatus', 'Encodeur MP3 indisponible (connexion ?) : fichier WAV téléchargé à la place.', 'warn');
+    }
+  },
+  downloadSrt() {
+    const pr = this.project; if (!pr || !pr.timeline) return;
+    const blob = new Blob(['﻿' + Exports.srt(pr.timeline, this.el('srtFr').checked)], { type: 'application/x-subrip' });
+    Exports.download(blob, `${this.fileBase()}.srt`);
+    this.status('mainStatus', '✓ Sous-titres téléchargés (calés sur la vidéo).', 'ok');
+  },
+
+  loadImage(file) {
+    if (!file) return;
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      // réduit les grandes photos (mémoire iPad)
+      const r = Math.min(1, 2200 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * r); c.height = Math.round(img.height * r); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); this.image = c; this.refreshScene();
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); this.status('mainStatus', 'Image illisible (essaie JPEG ou PNG).', 'err'); };
+    img.src = url;
+  },
+};
+
+window.addEventListener('DOMContentLoaded', () => UI.init());
+</script>
+</body>
+</html>
