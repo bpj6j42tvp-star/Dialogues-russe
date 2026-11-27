@@ -39,6 +39,30 @@ Choisis le modèle en haut de la page, puis un épisode prêt (1 ou 2) ou écris
 - Les durées sont des constantes de l'objet `Reading` (`COUNT`, `REVEAL`, `END`).
 - Après l'export, 4 images de contrôle : 0,0 s, dernier mot avant et après la révélation, écran de fin.
 
+## Mode Archives (`archives.html`)
+
+Page séparée, accessible par le lien « Mode Archives » de l'accueil. Elle monte des clips d'histoire à partir de films d'archives du domaine public, avec ta narration.
+
+1. **Vidéos** : importe une ou plusieurs vidéos depuis l'app Fichiers. [1] = 1re importée, [2] = 2e… Elles ne sont jamais chargées en entier : seuls les passages utiles sont lus. La page affiche durée, taille, format, et prévient si un fichier est lourd (plus de 400 Mo) ou illisible (préférer MP4 / H.264, version « MPEG4 » sur archive.org).
+2. **Script** :
+   ```
+   TITRE: Crise de Cuba — Jour 1
+   HOOK: Le 14 octobre 1962, un avion espion photographie l'impossible.
+   SOURCE: National Archives (NARA) — domaine public
+   [1] 00:12-00:20 | Phrase lue pendant cet extrait.
+   [2] 00:30-00:38 | Phrase suivante.
+   SUITE: Partie 2 : Kennedy découvre les photos.
+   QUESTION: Toi, t'aurais fait quoi à sa place ?
+   ```
+   Chaque extrait dure le temps de sa phrase. Si la phrase est plus longue que l'extrait, l'image ralentit (jusqu'à 80 % de sa vitesse) puis la dernière image reste figée.
+3. **Narration** : pour chaque phrase, ● Enregistrer / ▶ Écouter / Refaire / Importer un audio. Sans enregistrement, la voix Azure française est utilisée (mode réglable). Les enregistrements sont gardés sur l'iPad (par texte de phrase).
+4. **Son** : le son de l'archive est baissé automatiquement pendant la narration (deux réglages, 0 = coupé).
+5. **Montage 1080×1920** : archive entière sur fond flou ou recadrage zoomé, effet archive (grain + vignettage), HOOK en gros au début, sous-titres par groupes de mots / mot par mot / phrase, bandeau SOURCE, écran de fin crème (SUITE, « La suite sur mon profil », QUESTION). La durée est affichée, avec une alerte si elle est sous 1 min ou au-dessus de 3 min.
+6. **Export** : même moteur que les dialogues (30 i/s constants, H.264 + AAC, contrôle automatique), plus l'audio seul (MP3) et les sous-titres (.srt).
+7. **Projets** : « Enregistrer le projet » garde le script, les réglages et la liste des vidéos à réimporter.
+
+Les sous-titres « mot par mot » sont minutés au prorata de la longueur des mots (ni Azure en REST ni l'enregistrement ne donnent le minutage exact de chaque mot).
+
 ## Choix techniques
 
 - **Voix** : API REST `https://<région>.tts.speech.microsoft.com/cognitiveservices/v1`, SSML, format `riff-24khz-16bit-mono-pcm`. Si le navigateur bloque l'appel REST, la page bascule sur le SDK Speech officiel (WebSocket).
@@ -49,4 +73,5 @@ Choisis le modèle en haut de la page, puis un épisode prêt (1 ou 2) ou écris
 - **Charte « L'Est en 60 secondes »** : fond #F3ECE1, texte #1C1A18, rouge #A01D22, texte secondaire #5F5A52, filets #1C1A1840. Polices : Playfair Display 800, Source Serif 4 500, IBM Plex Mono 500. Marges de sécurité : 200 px en haut, 90 px sur les côtés, 300 px en bas.
 - **Cache** : l'audio déjà généré est gardé sur l'appareil (IndexedDB), donc pas de quota consommé si tu régénères le même texte.
 - **MP3** : encodé sur l'appareil avec lamejs. Si la bibliothèque ne se charge pas, l'audio est fourni en WAV.
+- Fichiers : `index.html` (dialogues, « Tu sais lire ça ? »), `archives.html` (mode Archives), `js/commun.js` (Azure, cache, export MP4, contrôle, MP3/SRT, charte) et `css/commun.css`.
 - Code découpé en modules (`Stress`, `DialogueParser`, `Reading` + `ReadingRenderer`, `AzureTTS`, `Timeline`, `VideoRenderer`, `VideoExporter`, `Exports`, `UI`). Les langues se règlent dans `LANGS` (géorgien et serbe déjà prévus, en test).

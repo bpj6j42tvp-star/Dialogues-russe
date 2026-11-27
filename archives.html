@@ -1,0 +1,1038 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#F3ECE1">
+<!--
+  Mode Archives. Sécurité : la page ne peut envoyer des données QU'À Azure Speech (connect-src).
+  Les vidéos et enregistrements restent sur l'iPad. La clé API n'est jamais écrite dans ce fichier.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' blob: data:; media-src 'self' blob: data: mediastream:; connect-src https://*.tts.speech.microsoft.com wss://*.tts.speech.microsoft.com https://cdn.jsdelivr.net blob: data:; worker-src blob:">
+<title>Studio Archives</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Playfair+Display:wght@800&family=Source+Serif+4:wght@500&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<script type="importmap">
+{ "imports": { "mediabunny": "https://cdn.jsdelivr.net/npm/mediabunny@1.65.2/dist/bundles/mediabunny.min.mjs" } }
+</script>
+<link rel="stylesheet" href="css/commun.css">
+<style>
+.src-list{list-style:none;padding:0;margin:10px 0 0}
+.src-list li{padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:#fff;font-size:14px}
+.src-list .n{font:500 13px "IBM Plex Mono",monospace;color:var(--accent);margin-right:6px}
+.src-list .warn{color:var(--warn);display:block;margin-top:4px}
+.src-list .bad{color:var(--err);display:block;margin-top:4px}
+.narr{list-style:none;padding:0;margin:10px 0 0}
+.narr li{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:#fff}
+.narr .tag{font:500 12px "IBM Plex Mono",monospace;letter-spacing:2px;color:var(--accent)}
+.narr .txt{font:500 18px/1.4 "Source Serif 4",Georgia,serif;margin:4px 0 8px}
+.narr .st{font-size:13px;color:var(--muted)}
+.narr .st.ok{color:var(--ok)}
+.narr .btns{margin-top:6px;gap:8px}
+.narr button{min-height:44px;padding:8px 12px;font-size:14px}
+.narr button.rec{background:var(--accent);color:#fff;border:0}
+.narr button.rec.on{background:#1C1A18}
+.dur{font-weight:600}
+.dur.ok{color:var(--ok)}.dur.warn{color:var(--warn)}
+</style>
+</head>
+<body>
+<header style="max-width:1200px;margin:0 auto">
+  <div class="mono">L'Est en 60 secondes · archives</div>
+  <h1>Studio Archives</h1>
+  <p class="sub">Films d'archives + ta narration → vidéo 9:16 sous-titrée, avec accroche et cliffhanger.
+    <a class="modelink" href="index.html">← Dialogues et « Tu sais lire ça ? »</a></p>
+</header>
+
+<div class="layout">
+<main>
+  <!-- Projet -->
+  <section class="card">
+    <h2><span class="n">◆</span>Projet</h2>
+    <div class="row">
+      <div><label for="projName">Nom du projet</label><input id="projName" type="text" value="Crise de Cuba — Jour 1"></div>
+      <div><label for="projList">Projets enregistrés sur cet iPad</label><select id="projList"><option value="">—</option></select></div>
+    </div>
+    <div class="btns">
+      <button id="btnSaveProj" class="small">Enregistrer le projet</button>
+      <button id="btnLoadProj" class="small">Ouvrir</button>
+      <button id="btnDelProj" class="small">Supprimer</button>
+    </div>
+    <div id="projStatus" class="status"></div>
+    <p class="hint">Un projet garde le script et les réglages. Tes enregistrements de voix sont gardés à part, phrase par phrase. Les vidéos ne sont pas copiées (trop lourdes) : réimporte-les dans le même ordre.</p>
+  </section>
+
+  <!-- 1. Clé Azure -->
+  <section class="card">
+    <h2><span class="n">1</span>Clé Azure Speech <span class="pill" style="font-weight:400">facultatif si tu enregistres ta voix</span></h2>
+    <div class="row">
+      <div><label for="azKey">Clé (KEY 1 ou KEY 2)</label><input id="azKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Colle ta clé ici"></div>
+      <div><label for="azRegion">Région (Location)</label><input id="azRegion" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. westeurope"></div>
+    </div>
+    <label class="check"><input id="azRemember" type="checkbox"> Mémoriser la clé sur cet iPad</label>
+    <div class="btns"><button id="btnTestKey">Tester la clé</button><button id="btnForgetKey">Effacer la clé</button></div>
+    <div id="keyStatus" class="status"></div>
+    <p class="hint">Même clé que sur la page des dialogues. Elle ne sert qu'à appeler Azure, directement depuis cet appareil. <span id="usage"></span></p>
+  </section>
+
+  <!-- 2. Vidéos -->
+  <section class="card">
+    <h2><span class="n">2</span>Vidéos d'archives</h2>
+    <input id="vidFile" type="file" accept="video/*,.mp4,.m4v,.mov,.webm,.mkv" multiple style="display:none">
+    <div class="btns" style="margin-top:0">
+      <button id="btnAddVid" class="primary">Importer depuis Fichiers…</button>
+      <button id="btnClearVid" class="small">Tout retirer</button>
+    </div>
+    <ul id="srcList" class="src-list"></ul>
+    <p class="hint">Dans le script, [1] = 1re vidéo importée, [2] = 2e, etc. Les vidéos ne sont pas chargées en mémoire : la page lit seulement les passages utiles. Format conseillé : MP4 (H.264). Sur archive.org, choisis la version « MPEG4 » ou « h.264 ».</p>
+    <p class="hint" id="expectedVids"></p>
+  </section>
+
+  <!-- 3. Script -->
+  <section class="card">
+    <h2><span class="n">3</span>Script</h2>
+    <textarea id="script" spellcheck="true" style="min-height:300px"></textarea>
+    <p class="hint">Format : <b>TITRE:</b> · <b>HOOK:</b> · <b>SOURCE:</b> · une ligne par extrait <b>[n] mm:ss-mm:ss | phrase</b> · <b>SUITE:</b> · <b>QUESTION:</b>. Lignes commençant par # = commentaires.</p>
+    <div id="scriptInfo" class="lines-info"></div>
+  </section>
+
+  <!-- 4. Narration -->
+  <section class="card">
+    <h2><span class="n">4</span>Narration</h2>
+    <div class="row3">
+      <div><label for="narrMode">Voix utilisée</label>
+        <select id="narrMode">
+          <option value="auto">Ma voix si enregistrée, sinon Azure</option>
+          <option value="mine">Ma voix uniquement</option>
+          <option value="azure">Azure uniquement</option>
+        </select></div>
+      <div><label for="frVoice">Voix Azure</label><select id="frVoice">
+        <option value="fr-FR-HenriNeural">Henri (homme)</option>
+        <option value="fr-FR-DeniseNeural">Denise (femme)</option>
+      </select></div>
+      <div><label for="rate">Débit Azure</label>
+        <div class="range"><input id="rate" type="range" min="-30" max="30" step="5" value="0"><output id="rateOut">0 %</output></div></div>
+    </div>
+    <label class="check"><input id="readHook" type="checkbox" checked> Lire le HOOK à voix haute (pendant le texte d'accroche)</label>
+    <label class="check"><input id="readEnd" type="checkbox" checked> Lire la SUITE et la QUESTION sur l'écran de fin</label>
+    <ul id="narrList" class="narr"></ul>
+    <input id="audFile" type="file" accept="audio/*,.m4a,.mp3,.wav,.aac" style="display:none">
+    <p class="hint">Enregistrer : touche ●, lis la phrase, touche ■. Le début et la fin silencieux sont coupés automatiquement. Le premier enregistrement demande l'accès au micro : accepte.</p>
+  </section>
+
+  <!-- 5. Montage -->
+  <section class="card">
+    <h2><span class="n">5</span>Montage</h2>
+    <div class="row3">
+      <div><label for="framing">Cadrage</label><select id="framing">
+        <option value="blur">Archive entière + fond flou</option>
+        <option value="zoom">Recadrage zoomé (plein écran)</option>
+      </select></div>
+      <div><label for="subMode">Sous-titres</label><select id="subMode">
+        <option value="groups">Par groupes de mots</option>
+        <option value="words">Mot par mot</option>
+        <option value="sentence">Phrase entière</option>
+        <option value="none">Aucun</option>
+      </select></div>
+      <div><label for="handle">Nom du compte</label><input id="handle" type="text" value="L'Est en 60 secondes"></div>
+    </div>
+    <label class="check"><input id="fxArchive" type="checkbox" checked> Effet « archive » (grain + vignettage)</label>
+    <label for="volFull">Son de l'archive hors narration</label>
+    <div class="range"><input id="volFull" type="range" min="0" max="100" step="5" value="70"><output id="volFullOut">70 %</output></div>
+    <label for="volDuck">Son de l'archive pendant la narration (0 = coupé)</label>
+    <div class="range"><input id="volDuck" type="range" min="0" max="60" step="5" value="15"><output id="volDuckOut">15 %</output></div>
+    <label for="endMention">Mention de l'écran de fin</label><input id="endMention" type="text" value="La suite sur mon profil">
+  </section>
+</main>
+
+<aside class="preview-col">
+  <section class="card">
+    <h2><span class="n">6</span>Aperçu et export</h2>
+    <div class="preview-wrap" style="background:#000"><canvas id="stage" width="1080" height="1920"></canvas></div>
+    <div class="range" style="margin-top:10px"><input id="seek" type="range" min="0" max="60" step="0.05" value="0"><output id="timeOut">0:00</output></div>
+    <p class="hint">Durée : <span id="durInfo" class="dur">—</span></p>
+    <div class="btns">
+      <button id="btnGen" class="primary" style="flex:1">Préparer le son</button>
+      <button id="btnPlay" style="flex:1">▶ Aperçu</button>
+    </div>
+    <div class="btns"><button id="btnExport" class="red" style="flex:1">● Créer la vidéo</button></div>
+    <div class="progress" id="prog"><i></i></div>
+    <div id="mainStatus" class="status"></div>
+    <div id="qc">
+      <div class="mono">Contrôle automatique</div>
+      <ul id="qcList"></ul>
+      <div class="frames" id="qcFrames"></div>
+    </div>
+    <video id="result" controls playsinline></video>
+    <div class="downloads">
+      <button id="dlVideo" class="wide" disabled>Télécharger la vidéo</button>
+      <button id="shareVideo" class="wide" disabled>Partager / Enregistrer dans Photos</button>
+      <button id="dlMp3" disabled>Audio seul (MP3)</button>
+      <button id="dlSrt" disabled>Sous-titres .srt</button>
+    </div>
+    <p class="hint">L'export est fait image par image (30 i/s fixes) : compte environ 2 à 4 minutes pour 1 min 30 de vidéo sur iPad. Reste sur cette page pendant l'export.</p>
+  </section>
+  <p class="foot">Export : <span id="fmtInfo">vérification…</span></p>
+</aside>
+</div>
+
+<script src="js/commun.js"></script>
+<script>
+'use strict';
+/* =====================================================================
+   Mode Archives : ArchiveScript · Sources · RecStore · Mic · Narration ·
+   ArchiveTimeline · ArchiveAudio · ArchiveRenderer · PreviewPlayer · ExportFrames · UI
+   (Azure, export MP4, contrôle, MP3/SRT : js/commun.js)
+   ===================================================================== */
+
+const fmtTime = s => { s = Math.max(0, s); const m = Math.floor(s / 60), r = s - m * 60; return `${m}:${r < 10 ? '0' : ''}${r.toFixed(r % 1 ? 1 : 0)}`; };
+const fmtMo = b => `${(b / 1048576).toFixed(b > 1e8 ? 0 : 1)} Mo`;
+const escHtml = s => String(s).replace(/[<&>"]/g, c => ({ '<': '&lt;', '&': '&amp;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------- Script ---------- */
+const ArchiveScript = {
+  EXAMPLE:
+`TITRE: Crise de Cuba — Jour 1
+HOOK: Le 14 octobre 1962, un avion espion photographie l'impossible.
+SOURCE: National Archives (NARA) — domaine public
+[1] 00:12-00:20 | Ce matin-là, un U-2 américain survole l'ouest de Cuba à plus de vingt kilomètres d'altitude.
+[1] 01:05-01:11 | Aux commandes, le major Richard Heyser. Son passage au-dessus de l'île ne dure que quelques minutes.
+[2] 00:30-00:38 | Le lendemain, les analystes découvrent sur ses photos des rampes de missiles soviétiques.
+SUITE: Partie 2 : Kennedy découvre les photos.
+QUESTION: Toi, t'aurais fait quoi à sa place ?`,
+  // « 00:12 », « 1:05 », « 1:02:03 », « 75 », « 00:12.5 »
+  time(s) {
+    const p = s.trim().replace(',', '.').split(':').map(Number);
+    if (!p.length || p.some(x => !isFinite(x) || x < 0)) return NaN;
+    return p.reduce((a, x) => a * 60 + x, 0);
+  },
+  // typographie française : « ? ! : ; » et guillemets ne restent jamais seuls en début de ligne
+  nbsp(t) { return t.replace(/ +([?!:;»])/g, '\u00A0$1').replace(/« +/g, '«\u00A0'); },
+  parse(src) {
+    const out = { title: '', hook: '', source: '', suite: '', question: '', lines: [], errors: [], warnings: [] };
+    const keys = { TITRE: 'title', HOOK: 'hook', SOURCE: 'source', SUITE: 'suite', QUESTION: 'question' };
+    (src || '').split(/\r?\n/).forEach((raw, i) => {
+      const s = raw.trim(); if (!s || s.startsWith('#')) return;
+      const k = s.match(/^(TITRE|HOOK|SOURCE|SUITE|QUESTION)\s*:\s*(.*)$/i);
+      if (k) { out[keys[k[1].toUpperCase()]] = this.nbsp(k[2].trim()); return; }
+      const m = s.match(/^\[\s*(\d+)\s*\]\s*([\d:.,]+)\s*[-–—]\s*([\d:.,]+)\s*\|\s*(.+)$/);
+      if (!m) { out.errors.push(`Ligne ${i + 1} : format attendu « [1] 00:12-00:20 | phrase ».`); return; }
+      const a = this.time(m[2]), b = this.time(m[3]);
+      if (!isFinite(a) || !isFinite(b)) { out.errors.push(`Ligne ${i + 1} : temps illisible (« ${m[2]} » ou « ${m[3]} »).`); return; }
+      if (b <= a) { out.errors.push(`Ligne ${i + 1} : la fin (${m[3]}) doit être après le début (${m[2]}).`); return; }
+      out.lines.push({ src: +m[1], start: a, end: b, text: this.nbsp(m[4].trim()), lineNo: i + 1 });
+    });
+    if (!out.lines.length) out.errors.push('Aucune ligne d\'extrait : ajoute au moins « [1] 00:12-00:20 | phrase ».');
+    if (!out.hook) out.warnings.push('Pas de HOOK : la vidéo commencera directement par la narration.');
+    if (!out.source) out.warnings.push('Pas de SOURCE : pense à citer l\'origine des archives.');
+    return out;
+  },
+};
+
+/* ---------- Vidéos importées (lues à la demande, jamais chargées en entier) ---------- */
+const Sources = {
+  list: [],   // { file, name, size, info, video, url }
+  WARN_MO: 400, HEAVY_MO: 1500,
+  async add(files) {
+    const MB = await VideoExporter.lib();
+    for (const file of files) {
+      const src = { file, name: file.name, size: file.size, info: null };
+      this.list.push(src);
+      try {
+        const input = new MB.Input({ source: new MB.BlobSource(file), formats: MB.ALL_FORMATS });
+        const vt = await input.getPrimaryVideoTrack();
+        if (!vt) { src.info = { ok: false, why: 'Pas de piste vidéo dans ce fichier.' }; continue; }
+        const at = await input.getPrimaryAudioTrack();
+        const dur = await input.computeDuration();
+        const canV = await vt.canDecode(), canA = at ? await at.canDecode() : false;
+        src.info = { ok: canV, input, vt, at: canA ? at : null, dur, w: vt.displayWidth, h: vt.displayHeight, vcodec: vt.codec, acodec: at ? at.codec : null,
+          why: canV ? '' : `Ce navigateur ne sait pas décoder la vidéo (codec « ${vt.codec || 'inconnu'} »). Télécharge la version MP4 / H.264 sur archive.org.` };
+      } catch (e) {
+        console.error(e);
+        src.info = { ok: false, why: 'Format non reconnu. Utilise un fichier MP4 (H.264) — sur archive.org, la version « MPEG4 » ou « h.264 ».' };
+      }
+    }
+  },
+  warnings(src) {
+    const w = [], mo = src.size / 1048576, i = src.info || {};
+    if (mo > this.HEAVY_MO) w.push(`Très lourd (${fmtMo(src.size)}) : l'iPad risque de ralentir. Préfère une version plus légère (« 512Kb MPEG4 » sur archive.org) ou coupe le passage utile.`);
+    else if (mo > this.WARN_MO) w.push(`Lourd (${fmtMo(src.size)}) : ça fonctionne, seul le passage utile est lu, mais l'aperçu peut être plus lent.`);
+    if (i.w > 1920 || i.h > 1920) w.push(`Très haute définition (${i.w}×${i.h}) : décodage plus lent ; la vidéo finale reste en 1080×1920.`);
+    if (i.ok && !i.at) w.push('Pas de son exploitable : seule ta narration sera entendue.');
+    return w;
+  },
+  video(k) {   // élément <video> pour l'aperçu (créé à la demande)
+    const s = this.list[k]; if (!s) return null;
+    if (!s.video) {
+      s.url = URL.createObjectURL(s.file);
+      const v = document.createElement('video');
+      v.muted = true; v.playsInline = true; v.preload = 'auto'; v.setAttribute('playsinline', ''); v.src = s.url;
+      s.video = v;
+    }
+    return s.video;
+  },
+  clear() {
+    this.list.forEach(s => { if (s.video) { s.video.removeAttribute('src'); s.video.load(); } if (s.url) URL.revokeObjectURL(s.url); });
+    this.list = [];
+  },
+};
+
+/* ---------- Enregistrements de voix (IndexedDB, par texte de phrase) ---------- */
+const RecStore = {
+  dbp: null,
+  db() {
+    if (!this.dbp) this.dbp = new Promise(res => {
+      try { const r = indexedDB.open('studio-archives', 1); r.onupgradeneeded = () => r.result.createObjectStore('voix'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }
+      catch { res(null); }
+    });
+    return this.dbp;
+  },
+  key(text) { return 'voix|' + text.replace(/\s+/g, ' ').trim(); },
+  async op(mode, fn) {
+    const db = await this.db(); if (!db) return null;
+    return new Promise(res => { try { const q = fn(db.transaction('voix', mode).objectStore('voix')); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); } catch { res(null); } });
+  },
+  get(text) { return this.op('readonly', s => s.get(this.key(text))); },
+  put(text, rec) { return this.op('readwrite', s => s.put(rec, this.key(text))); },
+  del(text) { return this.op('readwrite', s => s.delete(this.key(text))); },
+};
+
+/* ---------- Micro ---------- */
+const Mic = {
+  stream: null, rec: null, chunks: [], t0: 0,
+  mime() {
+    for (const m of ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm']) { try { if (MediaRecorder.isTypeSupported(m)) return m; } catch {} }
+    return '';
+  },
+  async start() {
+    if (!navigator.mediaDevices || !window.MediaRecorder) throw new UserError('Enregistrement impossible dans ce navigateur. Utilise Safari à jour, ou importe un fichier audio.');
+    if (!this.stream || !this.stream.active) {
+      try { this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+      catch (e) { throw new UserError(e.name === 'NotAllowedError' ? 'Accès au micro refusé. Réglages iPad → Safari → Microphone → Autoriser, puis recharge la page.' : 'Micro indisponible : ' + e.message); }
+    }
+    const mime = this.mime();
+    this.rec = new MediaRecorder(this.stream, mime ? { mimeType: mime } : undefined);
+    this.chunks = []; this.rec.ondataavailable = e => { if (e.data && e.data.size) this.chunks.push(e.data); };
+    this.rec.start(); this.t0 = performance.now();
+  },
+  stop() {
+    return new Promise(res => {
+      const r = this.rec; if (!r) return res(null);
+      r.onstop = () => { this.rec = null; res(new Blob(this.chunks, { type: (r.mimeType || 'audio/mp4').split(';')[0] })); };
+      r.stop();
+    });
+  },
+  release() { if (this.stream) { this.stream.getTracks().forEach(t => t.stop()); this.stream = null; } },
+};
+
+/* ---------- Narration : une piste par phrase (ta voix ou Azure) ---------- */
+const Narration = {
+  // Éléments à lire, dans l'ordre : HOOK (option), lignes, FIN (option)
+  items(script, { readHook, readEnd }) {
+    const it = [];
+    if (script.hook && readHook) it.push({ kind: 'hook', tag: 'HOOK', text: script.hook });
+    script.lines.forEach((l, i) => it.push({ kind: 'line', tag: `PHRASE ${i + 1} · [${l.src}] ${fmtTime(l.start)}–${fmtTime(l.end)}`, text: l.text, line: i }));
+    const fin = [script.suite, script.question].filter(Boolean).join(' ');
+    if (fin && readEnd) it.push({ kind: 'end', tag: 'FIN', text: fin });
+    return it;
+  },
+  normalize(samples, peak = 0.89) {
+    let m = 0; for (let i = 0; i < samples.length; i++) { const a = Math.abs(samples[i]); if (a > m) m = a; }
+    if (m > 0.001) { const k = peak / m; for (let i = 0; i < samples.length; i++) samples[i] *= k; }
+    return samples;
+  },
+  // Retourne [{ samples, dur, origin: 'voix'|'azure' }] dans l'ordre des éléments
+  async build(items, { mode, creds, voice, rate, engine = 'auto', onStatus }) {
+    const out = [], missing = [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const rec = mode !== 'azure' ? await RecStore.get(it.text) : null;
+      let buf, origin;
+      if (rec) { buf = await rec.blob.arrayBuffer(); origin = 'voix'; }
+      else if (mode === 'mine') { missing.push(it.tag.split(' ·')[0]); continue; }
+      else {
+        AzureTTS.checkCreds(creds);
+        onStatus && onStatus(`Voix Azure ${i + 1}/${items.length} : « ${it.text.slice(0, 40)} »`);
+        buf = (await AzureTTS.synthesize(creds, { text: it.text, voice, lang: 'fr-FR', rate }, { engine,
+          onWait: s => onStatus && onStatus(`Limite gratuite d'Azure (20 requêtes/min) : pause de ${s} s…`) })).buf;
+        origin = 'azure';
+      }
+      const ab = await AudioEngine.decode(buf);
+      const mono = new Float32Array(ab.length);
+      for (let c = 0; c < ab.numberOfChannels; c++) { const d = ab.getChannelData(c); for (let j = 0; j < d.length; j++) mono[j] += d[j] / ab.numberOfChannels; }
+      const fake = { getChannelData: () => mono, sampleRate: ab.sampleRate };
+      const samples = this.normalize(AudioEngine.trim(fake));
+      out[i] = { samples, dur: samples.length / ab.sampleRate, origin };
+    }
+    if (missing.length) throw new UserError(`Phrases pas encore enregistrées : ${missing.join(', ')}. Enregistre-les, ou choisis « Ma voix si enregistrée, sinon Azure ».`);
+    return out;
+  },
+};
+
+/* ---------- Sous-titres : groupes de mots calés sur la durée de la phrase ---------- */
+const Subtitles = {
+  // Durée répartie au prorata du nombre de lettres (pas de minutage mot à mot disponible).
+  groups(text, start, dur, mode) {
+    if (mode === 'none') return [];
+    const words = text.split(/[ \t\n]+/).filter(Boolean);   // l'espace insécable reste dans le mot
+    let groups = [];
+    if (mode === 'sentence') groups = [words.join(' ')];
+    else if (mode === 'words') groups = words.slice();
+    else {
+      let cur = [];
+      words.forEach((w, i) => {
+        cur.push(w);
+        const len = cur.join(' ').length, end = /[.!?…,;:]$/.test(w);
+        if (cur.length >= 4 || len >= 18 || end || i === words.length - 1) { groups.push(cur.join(' ')); cur = []; }
+      });
+    }
+    const weight = g => g.replace(/[^\p{L}\p{N}]/gu, '').length + 1;
+    const total = groups.reduce((a, g) => a + weight(g), 0);
+    let t = start;
+    return groups.map(g => { const d = dur * weight(g) / total, r = { text: g, start: t, end: t + d }; t += d; return r; });
+  },
+};
+
+/* ---------- Timeline ---------- */
+const ArchiveTimeline = {
+  HOOK_MIN: 2.0, PRE: 0.12, POST: 0.35, END_MIN: 3.5, MIN_SPEED: 0.8, END_PRE: 0.3,
+  // voices : sortie de Narration.build, alignée sur items ; null = aperçu sans audio (durées estimées)
+  build(script, items, voices, settings, sampleRate) {
+    const est = it => ({ samples: null, dur: 0.6 + it.text.length * 0.062 });
+    const v = items.map((it, i) => (voices && voices[i]) || est(it));
+    const byKind = k => items.findIndex(it => it.kind === k);
+    const ih = byKind('hook'), ie = byKind('end');
+    const hookVoice = ih >= 0 ? v[ih] : null;
+    const hookDur = script.hook ? Math.max(this.HOOK_MIN, hookVoice ? this.PRE + hookVoice.dur + 0.25 : 0) : 0;
+    const narr = [];
+    if (hookVoice) narr.push({ ...hookVoice, start: this.PRE, end: this.PRE + hookVoice.dur, text: script.hook, kind: 'hook' });
+    let t = 0;
+    const segs = script.lines.map((ln, li) => {
+      const vi = items.findIndex(it => it.kind === 'line' && it.line === li), voice = v[vi];
+      const lead = li === 0 ? hookDur : 0, vStart = t + lead + this.PRE;
+      const D = lead + this.PRE + voice.dur + this.POST, L = ln.end - ln.start;
+      const speed = D <= L ? 1 : Math.max(this.MIN_SPEED, L / D);
+      const seg = { index: li, src: ln.src - 1, srcStart: ln.start, srcEnd: ln.end, outStart: t, outEnd: t + D, speed,
+        playDur: Math.min(D, L / speed), text: ln.text, groups: Subtitles.groups(ln.text, vStart, voice.dur, settings.subMode) };
+      narr.push({ ...voice, start: vStart, end: vStart + voice.dur, text: ln.text, kind: 'line', seg: li });
+      t += D;
+      return seg;
+    });
+    const endStart = t, endVoice = ie >= 0 ? v[ie] : null;
+    if (endVoice) narr.push({ ...endVoice, start: endStart + this.END_PRE, end: endStart + this.END_PRE + endVoice.dur, text: items[ie].text, kind: 'end' });
+    const endDur = Math.max(this.END_MIN, endVoice ? this.END_PRE + endVoice.dur + 0.6 : 0);
+    const total = Math.round((endStart + endDur) * FPS) / FPS;
+    segs.forEach(s => { s.f0 = Math.round(s.outStart * FPS); s.f1 = Math.round(s.outEnd * FPS); });
+    const tl = { kind: 'archives', script, segs, narr, hookEnd: hookDur, endStart, total, frames: Math.round(total * FPS), sampleRate, settings };
+    tl.segAtFrame = f => { for (let k = 0; k < segs.length; k++) if (f >= segs[k].f0 && f < segs[k].f1) return k; return -1; };
+    tl.segAt = tt => tl.segAtFrame(Math.round(tt * FPS));
+    // instant dans l'archive pour l'instant tt de la vidéo (ralenti puis image figée si besoin)
+    tl.srcTime = (seg, tt) => seg.srcStart + Math.max(0, Math.min((tt - seg.outStart) * seg.speed, seg.srcEnd - seg.srcStart - 0.05));
+    tl.groupAt = tt => {
+      for (const s of segs) for (let i = 0; i < s.groups.length; i++) {
+        const gr = s.groups[i], next = s.groups[i + 1];
+        if (tt >= gr.start && tt < (next ? next.start : gr.end + 0.25)) return gr;
+      }
+      return null;
+    };
+    tl.describe = tt => {
+      if (tt < hookDur) return { label: 'Accroche (HOOK)', text: script.hook };
+      if (tt >= endStart) return { label: 'Écran de fin', text: script.suite };
+      const k = tl.segAt(tt), s = segs[k];
+      return s ? { label: `Extrait ${k + 1}/${segs.length} — vidéo [${s.src + 1}] à ${fmtTime(tl.srcTime(s, tt))}`, text: (tl.groupAt(tt) || {}).text } : { label: '—' };
+    };
+    tl.qcPoints = [['0,0 s', 0], ['milieu', total / 2], ['fin − 1 s', total - 1]];
+    // pour le .srt et le MP3 (format commun)
+    tl.items = narr.map(n => ({ start: n.start, end: n.end, dispEnd: n.end + 0.3, text: n.text, samples: n.samples }));
+    tl.dialogueEnd = total;
+    return tl;
+  },
+};
+
+/* ---------- Son : narration + archive baissée automatiquement ---------- */
+const ArchiveAudio = {
+  // Décode uniquement le passage utile de l'archive, le met à la vitesse du segment et au bon taux.
+  async segment(MB, src, seg, sr) {
+    const at = src && src.info && src.info.at; if (!at) return null;
+    const srcLen = Math.min(seg.playDur * seg.speed, seg.srcEnd - seg.srcStart);
+    if (srcLen <= 0.02) return null;
+    const sink = new MB.AudioBufferSink(at);
+    let rate = 0, out = null;
+    for await (const w of sink.buffers(seg.srcStart, seg.srcStart + srcLen)) {
+      const b = w.buffer; if (!out) { rate = b.sampleRate; out = new Float32Array(Math.ceil(srcLen * rate)); }
+      const off = Math.round((w.timestamp - seg.srcStart) * rate);
+      for (let c = 0; c < b.numberOfChannels; c++) {
+        const d = b.getChannelData(c);
+        for (let j = 0; j < d.length; j++) { const p = off + j; if (p >= 0 && p < out.length) out[p] += d[j] / b.numberOfChannels; }
+      }
+    }
+    if (!out) return null;
+    const outLen = Math.max(1, Math.ceil(srcLen / seg.speed * sr));
+    const oc = new OfflineAudioContext(1, outLen, sr);
+    const ab = oc.createBuffer(1, out.length, rate); ab.getChannelData(0).set(out);
+    const bs = oc.createBufferSource(); bs.buffer = ab; bs.playbackRate.value = seg.speed; bs.connect(oc.destination); bs.start();
+    return (await oc.startRendering()).getChannelData(0);
+  },
+  async mix(tl, { volFull, volDuck, onStatus }) {
+    const MB = await VideoExporter.lib(), sr = tl.sampleRate, out = new Float32Array(Math.round(tl.total * sr));
+    // enveloppe de volume de l'archive : pleine, baissée pendant chaque narration (rampes de 0,15 s)
+    const env = t => {
+      let g = volFull;
+      for (const n of tl.narr) {
+        if (t > n.start - 0.15 && t < n.end + 0.15) {
+          const k = Math.min(1, (t - (n.start - 0.15)) / 0.15, ((n.end + 0.15) - t) / 0.15);
+          g = Math.min(g, volFull + (volDuck - volFull) * Math.max(0, k));
+        }
+      }
+      return g;
+    };
+    if (volFull > 0 || volDuck > 0) {
+      for (let k = 0; k < tl.segs.length; k++) {
+        const seg = tl.segs[k];
+        onStatus && onStatus(`Son d'archive : extrait ${k + 1}/${tl.segs.length}…`);
+        const a = await this.segment(MB, Sources.list[seg.src], seg, sr);
+        if (!a) continue;
+        const off = Math.round(seg.outStart * sr), fade = Math.round(0.08 * sr);
+        let g = env(seg.outStart), nextG = 0;
+        for (let j = 0; j < a.length && off + j < out.length; j++) {
+          if (j >= nextG) { g = env(seg.outStart + j / sr); nextG = j + Math.round(sr / 200); }
+          const edge = Math.min(1, j / fade, (a.length - j) / fade);
+          out[off + j] += a[j] * g * edge;
+        }
+      }
+    }
+    for (const n of tl.narr) { if (!n.samples) continue; const off = Math.round(n.start * sr); for (let j = 0; j < n.samples.length && off + j < out.length; j++) out[off + j] += n.samples[j]; }
+    for (let i = 0; i < out.length; i++) { const x = out[i]; if (x > 0.95) out[i] = 0.95 + 0.05 * Math.tanh((x - 0.95) / 0.05); else if (x < -0.95) out[i] = -0.95 - 0.05 * Math.tanh((-x - 0.95) / 0.05); }
+    return out;
+  },
+};
+
+/* ---------- Rendu 1080×1920 ---------- */
+class ArchiveRenderer extends VideoRenderer {
+  constructor(canvas) {
+    super(canvas);
+    this.small = document.createElement('canvas'); this.small.width = 54; this.small.height = 96;
+    this.last = document.createElement('canvas'); this.last.width = 4; this.last.height = 4; this.lastOk = false;
+    this.noise = [0, 1, 2].map(() => {
+      const n = document.createElement('canvas'); n.width = n.height = 256;
+      const x = n.getContext('2d'), id = x.createImageData(256, 256);
+      for (let i = 0; i < id.data.length; i += 4) { const v = Math.random() * 255; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
+      x.putImageData(id, 0, 0); return n;
+    });
+    this.frameProvider = null;   // (t) → image (vidéo ou canvas) de l'archive à l'instant t
+  }
+  setScene(scene) { this.s = scene; this.layoutAll(); }
+  fit(text, fontFn, maxW, maxSize, minSize, maxLines) {
+    const g = this.g;
+    for (let sz = maxSize; sz >= minSize; sz -= 2) {
+      const lines = this.wrap(text, fontFn(sz), maxW); g.font = fontFn(sz);
+      if (lines.length <= maxLines && lines.every(l => g.measureText(l).width <= maxW)) return { size: sz, lines };
+    }
+    return { size: minSize, lines: this.wrap(text, fontFn(minSize), maxW) };
+  }
+  layoutAll() {
+    const sc = this.s.timeline.script, disp = sz => `800 ${sz}px ${F_DISPLAY}`, serif = sz => `500 ${sz}px ${F_SERIF}`;
+    this.hook = sc.hook ? this.fit(sc.hook, disp, 880, 120, 56, 4) : null;
+    this.suite = sc.suite ? this.fit(sc.suite, disp, 900, 96, 48, 4) : null;
+    this.question = sc.question ? this.fit(sc.question, serif, 900, 60, 36, 3) : null;
+    this.subCache = new Map();
+  }
+  outlined(text, x, y, size, font, fill = '#fff') {
+    const g = this.g; g.font = font; g.textAlign = 'center'; g.lineJoin = 'round'; g.miterLimit = 2;
+    g.lineWidth = Math.max(6, size * 0.16); g.strokeStyle = 'rgba(0,0,0,0.88)'; g.strokeText(text, x, y);
+    g.fillStyle = fill; g.fillText(text, x, y);
+  }
+  // copie de la dernière image valide (évite tout écran noir pendant un chargement)
+  remember(img, iw, ih) {
+    if (this.last.width !== iw || this.last.height !== ih) { this.last.width = iw; this.last.height = ih; }
+    this.last.getContext('2d').drawImage(img, 0, 0, iw, ih); this.lastOk = true;
+  }
+  drawFootage(img, iw, ih) {
+    const g = this.g, st = this.s.settings;
+    if (st.framing === 'zoom') {
+      const r = Math.max(W / iw, H / ih), w = iw * r, h = ih * r;
+      g.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+      return;
+    }
+    // fond flou : image réduite à 54×96 puis agrandie (flou fiable sur tous les Safari)
+    const sm = this.small.getContext('2d'), r0 = Math.max(54 / iw, 96 / ih);
+    sm.imageSmoothingEnabled = true; sm.imageSmoothingQuality = 'high';
+    sm.drawImage(img, (54 - iw * r0) / 2, (96 - ih * r0) / 2, iw * r0, ih * r0);
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    g.drawImage(this.small, 0, 0, W, H);
+    g.fillStyle = 'rgba(0,0,0,0.42)'; g.fillRect(0, 0, W, H);
+    // archive entière, en largeur, un peu au-dessus du centre (place pour les sous-titres dessous)
+    let w = W, h = ih * W / iw;
+    if (h > 1180) { h = 1180; w = iw * h / ih; }
+    const y = Math.max(300, 900 - h / 2);
+    g.drawImage(img, (W - w) / 2, y, w, h);
+  }
+  drawEffect(t) {
+    const g = this.g;
+    g.save(); g.globalCompositeOperation = 'overlay'; g.globalAlpha = 0.16;
+    const n = this.noise[Math.floor(t * FPS) % 3], ox = Math.floor((t * 977) % 256), oy = Math.floor((t * 613) % 256);
+    g.translate(-ox, -oy); g.fillStyle = g.createPattern(n, 'repeat'); g.fillRect(0, 0, W + 256, H + 256);
+    g.restore();
+    const vg = g.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.72);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+    g.fillStyle = vg; g.fillRect(0, 0, W, H);
+  }
+  subtitle(text) {
+    const mode = this.s.settings.subMode, disp = sz => `800 ${sz}px ${F_DISPLAY}`;
+    if (!this.subCache.has(text)) this.subCache.set(text, mode === 'words' ? this.fit(text, disp, 860, 104, 60, 1)
+      : mode === 'sentence' ? this.fit(text, disp, 860, 66, 40, 4) : this.fit(text, disp, 860, 80, 48, 2));
+    return this.subCache.get(text);
+  }
+
+  draw(t) {
+    const g = this.g, tl = this.s.timeline, sc = tl.script;
+    g.globalAlpha = 1; g.textBaseline = 'alphabetic'; g.globalCompositeOperation = 'source-over';
+    if (t >= tl.endStart) return this.drawEnd(t - tl.endStart);
+    g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+    const img = this.frameProvider && this.frameProvider(t);
+    const iw = img && (img.videoWidth || img.width), ih = img && (img.videoHeight || img.height);
+    if (img && iw && ih && (img.readyState === undefined || img.readyState >= 2)) { this.drawFootage(img, iw, ih); this.remember(img, iw, ih); }
+    else if (this.lastOk) this.drawFootage(this.last, this.last.width, this.last.height);
+    if (this.s.settings.fx) this.drawEffect(t);
+    // titre de la série
+    g.save(); g.shadowColor = 'rgba(0,0,0,0.85)'; g.shadowBlur = 10;
+    if (sc.title) this.mono(sc.title, SAFE.side, SAFE.top + 26, { color: '#ffffff', size: 26 });
+    g.restore();
+    g.fillStyle = C.accent; g.fillRect(SAFE.side, SAFE.top + 44, 60, 4);
+    // accroche : visible dès la première image, en gros
+    if (this.hook && t < tl.hookEnd) {
+      const A = 1 - clamp01((t - (tl.hookEnd - 0.25)) / 0.25);
+      g.globalAlpha = A; g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(0, 0, W, H);
+      const lh = this.hook.size * 1.12, h0 = this.hook.lines.length * lh;
+      this.hook.lines.forEach((l, i) => this.outlined(l, W / 2, 900 - h0 / 2 + lh * (i + 1) - lh * 0.22, this.hook.size, `800 ${this.hook.size}px ${F_DISPLAY}`));
+      g.globalAlpha = 1;
+    } else {
+      const gr = tl.groupAt(t);
+      if (gr) {
+        const f = this.subtitle(gr.text), lh = f.size * 1.15, h0 = f.lines.length * lh, cy = 1440;
+        f.lines.forEach((l, i) => this.outlined(l, W / 2, cy - h0 / 2 + lh * (i + 1) - lh * 0.22, f.size, `800 ${f.size}px ${F_DISPLAY}`));
+      }
+    }
+    // bandeau source (discret)
+    if (sc.source) { g.globalAlpha = 0.75; g.save(); g.shadowColor = 'rgba(0,0,0,0.9)'; g.shadowBlur = 8;
+      this.mono('Source : ' + sc.source, W / 2, H - SAFE.bottom - 6, { align: 'center', color: '#ffffff', size: 20, spacing: 2 }); g.restore(); g.globalAlpha = 1; }
+  }
+
+  // Écran de fin (charte crème) : SUITE + mention + QUESTION, visible dès la 1re image.
+  drawEnd(t) {
+    const g = this.g, sc = this.s.timeline.script, st = this.s.settings, L = SAFE.side, R = W - SAFE.side;
+    g.globalAlpha = 1; g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+    if (sc.title) this.mono(sc.title, L, SAFE.top + 26, { color: C.accent });
+    this.rule(L, R, SAFE.top + 60);
+    const blocks = [];
+    let y = 600;
+    this.mono('À suivre', W / 2, y, { align: 'center', color: C.muted, size: 30 });
+    y += 40;
+    if (this.suite) {
+      const lh = this.suite.size * 1.1; g.font = `800 ${this.suite.size}px ${F_DISPLAY}`; g.fillStyle = C.text; g.textAlign = 'center';
+      this.suite.lines.forEach((l, i) => g.fillText(l, W / 2, y + lh * (i + 1) - lh * 0.22)); y += this.suite.lines.length * lh;
+    }
+    y += 70;
+    if (st.endMention) this.mono(st.endMention + ' →', W / 2, y, { align: 'center', color: C.accent, size: 34 });
+    y += 60; this.rule(W / 2 - 40, W / 2 + 40, y, C.accent, 4); y += 40;
+    if (this.question) {
+      const k = ease((t - 0.3) / 0.3), lh = this.question.size * 1.25;
+      g.globalAlpha = k; g.font = `500 ${this.question.size}px ${F_SERIF}`; g.fillStyle = C.text; g.textAlign = 'center';
+      this.question.lines.forEach((l, i) => g.fillText(l, W / 2, y + lh * (i + 1) - lh * 0.22)); g.globalAlpha = 1;
+    }
+    this.rule(L, R, H - SAFE.bottom - 60);
+    if (st.handle) this.mono(st.handle, L, H - SAFE.bottom - 4, { color: C.muted });
+    void blocks;
+  }
+}
+
+/* ---------- Export : images exactes de l'archive (décodage à la demande) ---------- */
+class ExportFrames {
+  constructor(MB, tl) { this.MB = MB; this.tl = tl; this.k = -1; this.it = null; this.current = null; }
+  async prepare(t) {
+    const tl = this.tl, f = Math.round(t * FPS), k = tl.segAtFrame(f);
+    if (k < 0) return;
+    if (k !== this.k) {
+      if (this.it && this.it.return) { try { await this.it.return(); } catch {} }
+      this.k = k; const seg = tl.segs[k], src = Sources.list[seg.src];
+      if (!src || !src.info || !src.info.ok) throw new UserError(`La vidéo [${seg.src + 1}] est absente ou illisible.`);
+      const vt = src.info.vt, times = [];
+      for (let i = seg.f0; i < seg.f1; i++) times.push(tl.srcTime(seg, i / FPS));
+      const w = Math.min(vt.displayWidth, 1080);
+      this.it = new this.MB.CanvasSink(vt, { width: w, poolSize: 3 }).canvasesAtTimestamps(times);
+    }
+    const r = await this.it.next();
+    if (r.value && r.value.canvas) this.current = r.value.canvas;
+  }
+  frame() { return this.current; }
+}
+
+/* ---------- Aperçu : lecture avec les vidéos du navigateur ---------- */
+const PreviewPlayer = {
+  frameAt(tl, t, playing) {
+    const k = tl.segAt(t); if (k < 0) return null;
+    const seg = tl.segs[k], v = Sources.video(seg.src); if (!v) return null;
+    const st = tl.srcTime(seg, t), frozen = (t - seg.outStart) > seg.playDur;
+    if (playing) {
+      if (this.seg !== k || Math.abs(v.currentTime - st) > 0.35) { try { v.currentTime = st; } catch {} this.seg = k; }
+      if (frozen) { if (!v.paused) v.pause(); }
+      else { v.playbackRate = seg.speed; if (v.paused) v.play().catch(() => {}); }
+      this.active = v;
+    }
+    return v;
+  },
+  async seekTo(tl, t) {
+    const k = tl.segAt(t); if (k < 0) return;
+    const seg = tl.segs[k], v = Sources.video(seg.src); if (!v) return;
+    const st = tl.srcTime(seg, t);
+    if (Math.abs(v.currentTime - st) < 0.02 && v.readyState >= 2) return;
+    await new Promise(res => { const done = () => { v.removeEventListener('seeked', done); res(); }; v.addEventListener('seeked', done); try { v.currentTime = st; } catch { res(); } setTimeout(done, 1500); });
+  },
+  stopAll() { Sources.list.forEach(s => { if (s.video && !s.video.paused) s.video.pause(); }); this.seg = -1; },
+};
+
+/* ---------- Interface ---------- */
+const UI = {
+  el: id => document.getElementById(id),
+  project: null, video: null, playing: null,
+  FIELDS: ['script', 'narrMode', 'frVoice', 'rate', 'framing', 'subMode', 'handle', 'volFull', 'volDuck', 'endMention'],
+  CHECKS: ['readHook', 'readEnd', 'fxArchive'],
+
+  init() {
+    const $ = this.el;
+    this.renderer = new ArchiveRenderer($('stage'));
+    const cur = Store.get('archives.current', null);
+    if (cur) this.applyState(cur); else $('script').value = ArchiveScript.EXAMPLE;
+    $('handle').value = brandName($('handle').value);
+    // clé Azure (mêmes réglages que la page des dialogues)
+    $('azRegion').value = Store.get('region', '');
+    const savedKey = Store.get('key', ''); if (savedKey) { $('azKey').value = savedKey; $('azRemember').checked = true; }
+    $('azKey').addEventListener('change', () => { if ($('azRemember').checked) Store.set('key', $('azKey').value.trim()); });
+    $('azRegion').addEventListener('change', () => { $('azRegion').value = $('azRegion').value.trim().toLowerCase().replace(/\s+/g, ''); Store.set('region', $('azRegion').value); });
+    $('azRemember').addEventListener('change', e => { if (e.target.checked) Store.set('key', $('azKey').value.trim()); else Store.del('key'); });
+    $('btnForgetKey').addEventListener('click', () => { $('azKey').value = ''; $('azRemember').checked = false; Store.del('key'); this.status('keyStatus', 'Clé effacée de cet appareil.', 'ok'); });
+    $('btnTestKey').addEventListener('click', () => this.testKey());
+    // projets
+    this.refreshProjects();
+    $('btnSaveProj').addEventListener('click', () => this.saveProject());
+    $('btnLoadProj').addEventListener('click', () => this.loadProject());
+    $('btnDelProj').addEventListener('click', () => this.deleteProject());
+    // vidéos
+    $('btnAddVid').addEventListener('click', () => $('vidFile').click());
+    $('vidFile').addEventListener('change', async e => { const files = [...e.target.files]; e.target.value = ''; if (files.length) await this.addVideos(files); });
+    $('btnClearVid').addEventListener('click', () => { this.stopPlay(); Sources.clear(); this.renderSources(); this.invalidate(); this.refreshScene(); });
+    // script et réglages
+    let deb; const live = () => { clearTimeout(deb); deb = setTimeout(() => { this.saveState(); this.invalidateIfNeeded(); this.refreshScene(); this.renderNarr(); }, 300); };
+    this.FIELDS.forEach(f => { $(f).addEventListener('input', live); $(f).addEventListener('change', live); });
+    this.CHECKS.forEach(f => $(f).addEventListener('change', live));
+    const out = (id, fmt) => { const u = () => $(id + 'Out').textContent = fmt($(id).value); $(id).addEventListener('input', u); u(); };
+    out('rate', v => `${v > 0 ? '+' : ''}${v} %`); out('volFull', v => `${v} %`); out('volDuck', v => `${v} %`);
+    // narration
+    $('narrList').addEventListener('click', e => { const b = e.target.closest('button[data-act]'); if (b) this.narrAction(b.dataset.act, +b.dataset.i); });
+    $('audFile').addEventListener('change', e => this.importAudio(e.target.files[0]));
+    // actions
+    $('btnGen').addEventListener('click', () => { AudioEngine.unlock(); this.prepare(); });
+    $('btnPlay').addEventListener('click', () => { AudioEngine.unlock(); this.togglePlay(); });
+    $('btnExport').addEventListener('click', () => { AudioEngine.unlock(); this.exportVideo(); });
+    $('seek').addEventListener('input', () => { this.stopPlay(); this.scrub(+$('seek').value); });
+    $('dlVideo').addEventListener('click', () => this.video && Exports.download(this.video.blob, `${this.fileBase()}.mp4`));
+    $('shareVideo').addEventListener('click', () => this.shareVideo());
+    $('dlMp3').addEventListener('click', () => this.downloadMp3());
+    $('dlSrt').addEventListener('click', () => this.downloadSrt());
+    window.addEventListener('pagehide', () => Mic.release());
+    VideoExporter.support().then(s => { $('fmtInfo').textContent = s.ok ? 'MP4 · H.264 + AAC · 1080×1920 · 30 i/s' : s.why; }).catch(e => { $('fmtInfo').textContent = e.message; });
+    this.showUsage(); this.renderSources(); this.refreshScene(); this.renderNarr();
+    this.fontsReady().then(() => this.refreshScene());
+  },
+
+  async fontsReady() {
+    if (!document.fonts) return;
+    const ps = ['800 80px "Playfair Display"', '500 44px "Source Serif 4"', '500 26px "IBM Plex Mono"'].map(f => document.fonts.load(f, 'Crise de Cuba — à suivre ?'));
+    await Promise.race([Promise.all(ps).catch(() => {}), sleep(5000)]);
+  },
+  status(id, msg, kind = '') { const n = this.el(id); n.textContent = msg; n.className = 'status show ' + kind; },
+  progress(v) { const p = this.el('prog'); if (v === null) { p.classList.remove('show'); return; } p.classList.add('show'); p.firstElementChild.style.width = `${Math.round(v * 100)}%`; },
+  showUsage() { this.el('usage').textContent = `Estimation ce mois-ci : ${Usage.get().toLocaleString('fr-FR')} / 500 000 caractères.`; },
+  creds() { return { key: this.el('azKey').value.trim(), region: this.el('azRegion').value.trim().toLowerCase() }; },
+  settings() {
+    const $ = this.el;
+    return { narrMode: $('narrMode').value, voice: $('frVoice').value, rate: +$('rate').value, framing: $('framing').value, subMode: $('subMode').value,
+      handle: brandName($('handle').value.trim()), volFull: +$('volFull').value / 100, volDuck: +$('volDuck').value / 100,
+      endMention: $('endMention').value.trim(), readHook: $('readHook').checked, readEnd: $('readEnd').checked, fx: $('fxArchive').checked };
+  },
+  script() { return ArchiveScript.parse(this.el('script').value); },
+  fileBase() { return Exports.slug(this.script().title || this.el('projName').value || 'archives'); },
+
+  /* --- état et projets --- */
+  state() { const o = {}; this.FIELDS.forEach(f => o[f] = this.el(f).value); this.CHECKS.forEach(f => o[f] = this.el(f).checked); o.videos = Sources.list.map(s => s.name); return o; },
+  applyState(o) { this.FIELDS.forEach(f => { if (o[f] !== undefined) this.el(f).value = o[f]; }); this.CHECKS.forEach(f => { if (o[f] !== undefined) this.el(f).checked = o[f]; }); this.expected = o.videos || []; },
+  saveState() { Store.set('archives.current', { ...this.state(), name: this.el('projName').value }); },
+  projects() { return Store.get('archives.projects', {}); },
+  refreshProjects() {
+    const sel = this.el('projList'), ps = this.projects(); sel.innerHTML = '<option value="">—</option>';
+    Object.keys(ps).sort().forEach(n => sel.add(new Option(`${n} (${new Date(ps[n].savedAt).toLocaleDateString('fr-FR')})`, n)));
+  },
+  saveProject() {
+    const name = this.el('projName').value.trim(); if (!name) return this.status('projStatus', 'Donne un nom au projet.', 'err');
+    const ps = this.projects(); ps[name] = { ...this.state(), savedAt: Date.now() }; Store.set('archives.projects', ps);
+    this.refreshProjects(); this.el('projList').value = name;
+    this.status('projStatus', `✓ Projet « ${name} » enregistré sur cet iPad.`, 'ok');
+  },
+  loadProject() {
+    const name = this.el('projList').value, p = this.projects()[name]; if (!p) return this.status('projStatus', 'Choisis un projet dans la liste.', 'warn');
+    this.stopPlay(); this.applyState(p); this.el('projName').value = name; this.saveState(); this.invalidate();
+    this.renderSources(); this.refreshScene(); this.renderNarr();
+    this.status('projStatus', `✓ Projet « ${name} » ouvert.${p.videos && p.videos.length ? ' Réimporte les vidéos dans cet ordre : ' + p.videos.map((v, i) => `[${i + 1}] ${v}`).join(', ') : ''}`, 'ok');
+  },
+  deleteProject() {
+    const name = this.el('projList').value; if (!name) return;
+    const ps = this.projects(); delete ps[name]; Store.set('archives.projects', ps); this.refreshProjects();
+    this.status('projStatus', `Projet « ${name} » supprimé (tes enregistrements de voix restent disponibles).`, 'ok');
+  },
+
+  async testKey() {
+    const c = this.creds();
+    try {
+      AzureTTS.checkCreds(c); this.status('keyStatus', 'Test en cours…');
+      const voices = await AzureTTS.listVoices(c), fr = voices.filter(v => v.Locale === 'fr-FR');
+      const sel = this.el('frVoice'), cur = sel.value; sel.innerHTML = '';
+      fr.forEach(v => sel.add(new Option(`${v.LocalName || v.ShortName.replace(/^fr-FR-|Neural$/g, '')} (${v.Gender === 'Male' ? 'homme' : 'femme'})`, v.ShortName)));
+      if (!fr.length) ['fr-FR-HenriNeural', 'fr-FR-DeniseNeural'].forEach(n => sel.add(new Option(n, n)));
+      if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+      if (this.el('azRemember').checked) Store.set('key', c.key); Store.set('region', c.region);
+      const ok = ['fr-FR-HenriNeural', 'fr-FR-DeniseNeural'].filter(n => fr.some(v => v.ShortName === n));
+      this.status('keyStatus', `✓ Clé valide. ${fr.length} voix françaises disponibles (dont ${ok.map(n => n.replace(/^fr-FR-|Neural$/g, '')).join(' et ') || 'ni Henri ni Denise'}).`, 'ok');
+    } catch (e) { this.status('keyStatus', e.message || String(e), 'err'); }
+  },
+
+  /* --- vidéos --- */
+  async addVideos(files) {
+    this.status('mainStatus', `Analyse de ${files.length} vidéo(s)…`);
+    try { await Sources.add(files); } catch (e) { this.status('mainStatus', e.message || String(e), 'err'); }
+    this.renderSources(); this.invalidate(); this.refreshScene();
+    const bad = Sources.list.filter(s => s.info && !s.info.ok).length;
+    this.status('mainStatus', bad ? `⚠ ${bad} vidéo(s) illisible(s) : voir la liste.` : `✓ ${Sources.list.length} vidéo(s) prête(s).`, bad ? 'warn' : 'ok');
+    this.saveState();
+  },
+  renderSources() {
+    const ul = this.el('srcList');
+    ul.innerHTML = Sources.list.map((s, i) => {
+      const inf = s.info || {}, warns = Sources.warnings(s);
+      return `<li><span class="n">[${i + 1}]</span><b>${escHtml(s.name)}</b><br>${inf.ok ? `${fmtTime(inf.dur)} · ${inf.w}×${inf.h} · ${escHtml(inf.vcodec || '?')}${inf.acodec ? ' + ' + escHtml(inf.acodec) : ' · sans son'} · ${fmtMo(s.size)}` : fmtMo(s.size)}` +
+        (inf.ok ? '' : `<span class="bad">✗ ${escHtml(inf.why || 'Illisible')}</span>`) + warns.map(w => `<span class="warn">⚠ ${escHtml(w)}</span>`).join('') + '</li>';
+    }).join('');
+    const exp = this.expected || [];
+    this.el('expectedVids').textContent = exp.length && !Sources.list.length ? `Vidéos attendues pour ce projet : ${exp.map((v, i) => `[${i + 1}] ${v}`).join(' · ')}` : '';
+  },
+
+  /* --- narration (liste des phrases à enregistrer) --- */
+  narrItems() { return Narration.items(this.script(), this.settings()); },
+  async renderNarr() {
+    const items = this.narrItems(), mode = this.settings().narrMode, token = (this.narrToken = (this.narrToken || 0) + 1);
+    const recs = await Promise.all(items.map(it => RecStore.get(it.text)));
+    if (token !== this.narrToken) return;
+    this.recs = recs;
+    this.el('narrList').innerHTML = items.map((it, i) => {
+      const r = recs[i], recording = this.recIndex === i;
+      const st = r ? `<span class="st ok">✓ Ta voix (${r.dur ? r.dur.toFixed(1) + ' s' : 'enregistrée'})${mode === 'azure' ? ' — ignorée : mode « Azure uniquement »' : ''}</span>`
+        : `<span class="st">${mode === 'mine' ? '● À enregistrer' : 'Voix Azure (pas encore enregistrée)'}</span>`;
+      return `<li><div class="tag">${escHtml(it.tag)}</div><div class="txt">${escHtml(it.text)}</div>${st}
+        <div class="btns"><button data-act="rec" data-i="${i}" class="rec${recording ? ' on' : ''}">${recording ? '■ Stop' : r ? '● Refaire' : '● Enregistrer'}</button>
+        <button data-act="play" data-i="${i}"${r ? '' : ' disabled'}>▶ Écouter</button>
+        <button data-act="import" data-i="${i}">Importer un audio</button>
+        <button data-act="del" data-i="${i}"${r ? '' : ' disabled'}>Effacer</button></div></li>`;
+    }).join('');
+  },
+  async narrAction(act, i) {
+    const it = this.narrItems()[i]; if (!it) return;
+    try {
+      if (act === 'rec') {
+        if (this.recIndex === i) {   // stop
+          const blob = await Mic.stop(); this.recIndex = null;
+          await this.storeRecording(it.text, blob, 'micro');
+        } else {
+          if (this.recIndex != null) { await Mic.stop(); this.recIndex = null; }
+          this.stopPlay(); await Mic.start(); this.recIndex = i;
+          this.status('mainStatus', `● Enregistrement de la phrase… lis : « ${it.text} »`, 'warn');
+        }
+        this.renderNarr();
+      } else if (act === 'play') {
+        const r = await RecStore.get(it.text); if (!r) return;
+        if (this.audioEl) { this.audioEl.pause(); URL.revokeObjectURL(this.audioEl.src); }
+        this.audioEl = new Audio(URL.createObjectURL(r.blob)); this.audioEl.play().catch(() => {});
+      } else if (act === 'import') {
+        this.importFor = i; this.el('audFile').click();
+      } else if (act === 'del') {
+        await RecStore.del(it.text); this.invalidate(); this.renderNarr();
+      }
+    } catch (e) { this.recIndex = null; this.renderNarr(); this.status('mainStatus', e.message || String(e), 'err'); }
+  },
+  async importAudio(file) {
+    this.el('audFile').value = '';
+    const it = this.narrItems()[this.importFor]; if (!file || !it) return;
+    if (file.size > 50 * 1048576) return this.status('mainStatus', `Fichier audio trop lourd (${fmtMo(file.size)}) pour une phrase. Coupe-le à la phrase voulue.`, 'err');
+    try { await this.storeRecording(it.text, file, 'fichier'); } catch (e) { this.status('mainStatus', e.message || String(e), 'err'); }
+    this.renderNarr();
+  },
+  async storeRecording(text, blob, origin) {
+    if (!blob || !blob.size) throw new UserError('Enregistrement vide. Réessaie (et parle après avoir touché ●).');
+    const ab = await AudioEngine.decode(await blob.arrayBuffer());   // vérifie qu'il est lisible
+    const trimmed = AudioEngine.trim(ab), dur = trimmed.length / ab.sampleRate;
+    if (dur < 0.3) throw new UserError('Je n\'entends presque rien dans cet enregistrement. Rapproche-toi du micro et recommence.');
+    await RecStore.put(text, { blob: new Blob([blob], { type: blob.type || 'audio/mp4' }), dur, origin, at: Date.now() });
+    this.invalidate();
+    this.status('mainStatus', `✓ Voix enregistrée (${dur.toFixed(1)} s).`, 'ok');
+  },
+
+  /* --- préparation du son et timeline --- */
+  invalidate() { this.project = null; this.video = null; ['dlVideo', 'shareVideo', 'dlMp3', 'dlSrt'].forEach(id => this.el(id).disabled = true); this.el('qc').style.display = 'none'; this.el('result').style.display = 'none'; },
+  sig() { const s = this.settings(); return JSON.stringify([this.el('script').value, s.narrMode, s.voice, s.rate, s.readHook, s.readEnd, s.volFull, s.volDuck, s.subMode, Sources.list.map(x => x.name + x.size)]); },
+  invalidateIfNeeded() { if (this.project && this.project.sig !== this.sig()) this.invalidate(); },
+  validate(sc) {
+    const errs = [...sc.errors];
+    sc.lines.forEach(l => {
+      const s = Sources.list[l.src - 1];
+      if (!s) errs.push(`Ligne ${l.lineNo} : la vidéo [${l.src}] n'est pas importée.`);
+      else if (s.info && !s.info.ok) errs.push(`Ligne ${l.lineNo} : la vidéo [${l.src}] est illisible.`);
+      else if (s.info && l.start >= s.info.dur) errs.push(`Ligne ${l.lineNo} : ${fmtTime(l.start)} dépasse la durée de la vidéo [${l.src}] (${fmtTime(s.info.dur)}).`);
+    });
+    return errs;
+  },
+  refreshScene() {
+    const sc = this.script(), st = this.settings(), items = Narration.items(sc, st);
+    const tl = this.project ? this.project.timeline : ArchiveTimeline.build(sc, items, null, st, 48000);
+    this.timeline = tl;
+    this.renderer.setScene({ timeline: tl, settings: st });
+    this.renderer.frameProvider = t => PreviewPlayer.frameAt(tl, t, !!this.playing);
+    const sk = this.el('seek'); sk.max = tl.total.toFixed(2); if (+sk.value > tl.total) sk.value = 0;
+    // informations
+    const errs = this.validate(sc), d = tl.total, ok = d >= 60 && d <= 180;
+    this.el('durInfo').textContent = `${fmtTime(d)}${this.project ? '' : ' (estimée)'} — ${d < 60 ? '⚠ moins d\'1 min' : d > 180 ? '⚠ plus de 3 min' : '✓ entre 1 et 3 min'}`;
+    this.el('durInfo').className = 'dur ' + (ok ? 'ok' : 'warn');
+    this.el('scriptInfo').innerHTML = `${sc.lines.length} extrait(s) · durée ${fmtTime(d)}${this.project ? '' : ' (estimée)'}` +
+      (errs.length ? `<br><span style="color:var(--err)">${errs.slice(0, 5).map(escHtml).join('<br>')}</span>` : '') +
+      (sc.warnings.length ? `<br><span style="color:var(--warn)">${sc.warnings.map(escHtml).join('<br>')}</span>` : '');
+    if (!this.playing && !this.exporting) this.scrub(+sk.value || Math.min(tl.total, tl.hookEnd + 1));
+  },
+  async scrub(t) {
+    const tl = this.timeline; if (!tl) return;
+    this.timeLabel(t);
+    const token = (this.scrubToken = (this.scrubToken || 0) + 1);
+    this.renderer.draw(t);                       // tout de suite (image précédente)
+    await PreviewPlayer.seekTo(tl, t);
+    if (token === this.scrubToken && !this.playing && !this.exporting) this.renderer.draw(t);
+  },
+  timeLabel(t) { const s = Math.max(0, Math.floor(t)); this.el('timeOut').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; },
+  busy(on) { ['btnGen', 'btnExport', 'btnTestKey'].forEach(id => this.el(id).disabled = on); this.isBusy = on; },
+
+  async prepare() {
+    if (this.isBusy) return null;
+    try {
+      const sc = this.script(), st = this.settings(), errs = this.validate(sc);
+      if (errs.length) throw new UserError('Corrige d\'abord :\n' + errs.slice(0, 4).join('\n'));
+      const sig = this.sig();
+      if (this.project && this.project.sig === sig) { this.status('mainStatus', '✓ Son déjà prêt.', 'ok'); return this.project; }
+      this.busy(true); this.stopPlay();
+      const items = Narration.items(sc, st);
+      const voices = await Narration.build(items, { mode: st.narrMode, creds: this.creds(), voice: st.voice, rate: st.rate,
+        onStatus: m => this.status('mainStatus', m) });
+      const sr = AudioEngine.get().sampleRate;
+      const tl = ArchiveTimeline.build(sc, items, voices, st, sr);
+      const mix = await ArchiveAudio.mix(tl, { volFull: st.volFull, volDuck: st.volDuck, onStatus: m => this.status('mainStatus', m) });
+      const ab = AudioEngine.get().createBuffer(1, mix.length, sr); ab.getChannelData(0).set(mix);
+      this.project = { sig, timeline: tl, mix, audioBuffer: ab, sampleRate: sr };
+      ['dlMp3', 'dlSrt'].forEach(id => this.el(id).disabled = false);
+      this.refreshScene();
+      const mine = voices.filter(v => v.origin === 'voix').length;
+      this.status('mainStatus', `✓ Son prêt (${fmtTime(tl.total)}) : ${mine} phrase(s) avec ta voix, ${voices.length - mine} avec Azure.`, 'ok');
+      return this.project;
+    } catch (e) { this.status('mainStatus', e.message || String(e), 'err'); console.error(e); return null; }
+    finally { this.busy(false); }
+  },
+
+  async togglePlay() {
+    if (this.playing) return this.stopPlay();
+    const pr = await this.prepare(); if (!pr) return;
+    const ctx = AudioEngine.get(); if (ctx.state !== 'running') await ctx.resume();
+    const tl = pr.timeline, off = +this.el('seek').value >= tl.total - 0.1 ? 0 : +this.el('seek').value;
+    const src = ctx.createBufferSource(); src.buffer = pr.audioBuffer; src.connect(ctx.destination);
+    const t0 = ctx.currentTime + 0.05 - off; src.start(ctx.currentTime + 0.05, off);
+    this.playing = { src }; this.el('btnPlay').textContent = '■ Stop';
+    const tick = () => {
+      if (!this.playing || this.playing.src !== src) return;
+      const t = ctx.currentTime - t0;
+      if (t >= tl.total) { this.stopPlay(); return; }
+      this.renderer.draw(Math.max(0, t)); this.el('seek').value = t; this.timeLabel(t);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    src.onended = () => { if (this.playing && this.playing.src === src) this.stopPlay(); };
+  },
+  stopPlay() {
+    if (!this.playing) return;
+    try { this.playing.src.stop(); } catch {}
+    this.playing = null; PreviewPlayer.stopAll(); this.el('btnPlay').textContent = '▶ Aperçu';
+  },
+
+  async exportVideo() {
+    if (this.exporting) { this.abort && this.abort.abort(); return; }
+    const pr = await this.prepare(); if (!pr) return;
+    this.stopPlay(); this.exporting = true;
+    this.busy(true); const b = this.el('btnExport'); b.disabled = false; b.textContent = '■ Annuler l\'export';
+    this.abort = new AbortController(); this.el('qc').style.display = 'none';
+    const prev = this.renderer.frameProvider;
+    try {
+      await this.fontsReady();
+      const MB = await VideoExporter.lib(), tl = pr.timeline, feeder = new ExportFrames(MB, tl), t0 = performance.now();
+      this.renderer.prepareFrame = t => feeder.prepare(t);
+      this.renderer.frameProvider = () => feeder.frame();
+      this.status('mainStatus', `Encodage de ${tl.frames} images (${fmtTime(tl.total)} à 30 i/s)…`);
+      const res = await VideoExporter.export({ canvas: this.el('stage'), renderer: this.renderer, timeline: tl, mix: pr.mix, sampleRate: pr.sampleRate,
+        signal: this.abort.signal, onProgress: (p, i, n) => { this.progress(p); this.timeLabel(i / FPS); this.el('seek').value = i / FPS; if (i % 90 === 0) this.status('mainStatus', `Encodage image ${i}/${n}…`); } });
+      this.video = res;
+      const secs = ((performance.now() - t0) / 1000).toFixed(0), mb = (res.blob.size / 1048576).toFixed(1);
+      this.status('mainStatus', `Vidéo encodée en ${secs} s (${mb} Mo). Contrôle automatique…`);
+      const v = this.el('result'); if (v.src) URL.revokeObjectURL(v.src); v.src = URL.createObjectURL(res.blob); v.style.display = 'block';
+      this.el('dlVideo').disabled = false; this.el('shareVideo').disabled = !navigator.canShare;
+      const qc = await VideoExporter.verify(res.blob, tl, res);
+      this.showQC(qc);
+      this.status('mainStatus', qc.ok ? `✓ Vidéo prête et vérifiée (MP4, ${mb} Mo, ${fmtTime(tl.total)}). Regarde les images de contrôle, puis télécharge ou partage.`
+        : '⚠ Vidéo créée mais le contrôle a trouvé un problème (voir la liste). Envoie-moi une capture.', qc.ok ? 'ok' : 'warn');
+    } catch (e) { this.status('mainStatus', e.message || String(e), 'err'); console.error(e); }
+    finally {
+      this.renderer.prepareFrame = null; this.renderer.frameProvider = prev;
+      this.exporting = false; this.progress(null); this.busy(false); b.textContent = '● Créer la vidéo';
+      this.scrub(+this.el('seek').value);
+    }
+  },
+  showQC(qc) {
+    this.el('qcList').innerHTML = qc.checks.map(c => `<li>${c.ok ? '✓' : '✗'} ${escHtml(c.label)}</li>`).join('');
+    this.el('qcFrames').innerHTML = qc.frames.map(f => `<figure>${f.url ? `<img src="${f.url}" alt="">` : ''}<figcaption><b>${escHtml(f.name)}</b> (${f.t.toFixed(1)} s)<br>${escHtml(f.expected.label)}${f.expected.text ? ' — « ' + escHtml(f.expected.text) + ' »' : ''}</figcaption></figure>`).join('');
+    this.el('qc').style.display = 'block';
+  },
+  async shareVideo() {
+    if (!this.video) return;
+    const file = new File([this.video.blob], `${this.fileBase()}.mp4`, { type: 'video/mp4' });
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: this.script().title || 'Archives' });
+      else this.status('mainStatus', 'Le partage direct n\'est pas disponible ici : utilise « Télécharger la vidéo ».', 'warn');
+    } catch (e) { if (e.name !== 'AbortError') this.status('mainStatus', 'Partage impossible : ' + e.message, 'err'); }
+  },
+  async downloadMp3() {
+    const pr = this.project; if (!pr) return;
+    try { this.status('mainStatus', 'Encodage MP3…'); Exports.download(await Exports.mp3(pr.mix, pr.sampleRate), `${this.fileBase()}.mp3`); this.status('mainStatus', '✓ MP3 prêt (narration + son d\'archive).', 'ok'); }
+    catch (e) { console.error(e); Exports.download(Exports.wav(pr.mix, pr.sampleRate), `${this.fileBase()}.wav`); this.status('mainStatus', 'Encodeur MP3 indisponible : fichier WAV téléchargé à la place.', 'warn'); }
+  },
+  downloadSrt() {
+    const pr = this.project; if (!pr) return;
+    Exports.download(new Blob(['﻿' + Exports.srt(pr.timeline, false)], { type: 'application/x-subrip' }), `${this.fileBase()}.srt`);
+    this.status('mainStatus', '✓ Sous-titres téléchargés (une entrée par phrase, calés sur la vidéo).', 'ok');
+  },
+};
+
+window.addEventListener('DOMContentLoaded', () => UI.init());
+</script>
+</body>
+</html>
