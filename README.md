@@ -28,16 +28,16 @@ Tout se passe dans le navigateur (Safari sur iPad), sans serveur. Les voix vienn
 
 ## Modèle « Tu sais lire ça ? »
 
-Choisis le modèle en haut de la page. Les mots se saisissent en JSON (l'épisode 1 est pré-rempli) :
+Choisis le modèle en haut de la page, puis un épisode prêt (1 ou 2) ou écris ta liste de mots en JSON :
 
 ```json
-[{"mot": "ЗДРА́[В]СТВУЙТЕ", "transcription": "zdrástvouïtié", "traduction": "bonjour (en vouvoyant)", "note": "Le premier В ne se prononce pas"}]
+[{"mot": "ДОСТОПРИМЕ|ЧА́ТЕЛЬНОСТЬ", "transcription": "dastaprimitchátil'nast'", "traduction": "un lieu à visiter", "note": "…"}]
 ```
 
-- Accent tonique : accent aigu après la voyelle. Lettre muette : entre crochets. Tous ces signes sont retirés avant la synthèse vocale, et le mot est envoyé en minuscules pour qu'Azure ne l'épelle pas comme un sigle.
-- Déroulé : accroche 2,5 s, puis pour chaque mot apparition 0,4 s, compte à rebours 2,4 s (avec un « tic » discret, désactivable) et révélation 2,5 s, puis écran de fin 3 s. Les durées sont des constantes de l'objet `Reading`.
-- Le mot prend la plus grande taille qui tient sur une ligne de 900 px (plafonnée à 320 px).
-- Après l'export, 4 images de contrôle : accroche (0,5 s), dernier mot avant et après la révélation, écran de fin.
+- Accent tonique : accent aigu après la voyelle. Lettre muette : entre crochets. « | » : endroit où couper un mot très long (utilisé seulement si le mot tiendrait sur une ligne à moins de 110 px). Ces signes sont retirés avant la synthèse vocale, et le mot part en minuscules pour qu'Azure ne l'épelle pas comme un sigle.
+- Déroulé : pas d'écran d'accroche. Dès 0,0 s, le premier mot est affiché avec « Tu sais lire ça ? » en rouge au-dessus, et le premier tic tombe sur la première image. Pour chaque mot : compte à rebours de 2 s (2 tics), puis révélation de 2 s (prolongée si la voix est plus longue). Écran de fin de 2,5 s. Les mots s'enchaînent en coupe franche, sans écran vide.
+- Les durées sont des constantes de l'objet `Reading` (`COUNT`, `REVEAL`, `END`).
+- Après l'export, 4 images de contrôle : 0,0 s, dernier mot avant et après la révélation, écran de fin.
 
 ## Choix techniques
 
