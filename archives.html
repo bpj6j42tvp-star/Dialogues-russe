@@ -52,7 +52,7 @@
   <section class="card">
     <h2><span class="n">◆</span>Projet</h2>
     <div class="row">
-      <div><label for="projName">Nom du projet</label><input id="projName" type="text" value="Crise de Cuba — Jour 1"></div>
+      <div><label for="projName">Nom du projet</label><input id="projName" type="text" value="Crise de Cuba — Partie 1"></div>
       <div><label for="projList">Projets enregistrés sur cet iPad</label><select id="projList"><option value="">—</option></select></div>
     </div>
     <div class="btns">
@@ -193,15 +193,24 @@ const escHtml = s => String(s).replace(/[<&>"]/g, c => ({ '<': '&lt;', '&': '&am
 
 /* ---------- Script ---------- */
 const ArchiveScript = {
+  // Exemple réel : deux actualités Universal Newsreel d'octobre 1962 (domaine public, Internet Archive), voir README.
   EXAMPLE:
-`TITRE: Crise de Cuba — Jour 1
+`TITRE: Crise de Cuba — Partie 1
 HOOK: Le 14 octobre 1962, un avion espion photographie l'impossible.
-SOURCE: National Archives (NARA) — domaine public
-[1] 00:12-00:20 | Ce matin-là, un U-2 américain survole l'ouest de Cuba à plus de vingt kilomètres d'altitude.
-[1] 01:05-01:11 | Aux commandes, le major Richard Heyser. Son passage au-dessus de l'île ne dure que quelques minutes.
-[2] 00:30-00:38 | Le lendemain, les analystes découvrent sur ses photos des rampes de missiles soviétiques.
-SUITE: Partie 2 : Kennedy découvre les photos.
-QUESTION: Toi, t'aurais fait quoi à sa place ?`,
+SOURCE: Universal Newsreel, octobre 1962 (Internet Archive) — domaine public
+# [1] = cuba-1962-10-25.mp4 (« The Cuban Crisis ») · [2] = blocus-1962-10-22.mp4 (« The Red Threat »)
+[1] 02:10-02:29 | Les États-Unis équipent leurs avions de reconnaissance de caméras géantes.
+[1] 02:30-02:37 | Ce jour-là, un U-2 piloté par le major Richard Heyser survole l'ouest de Cuba.
+[1] 02:38-02:50 | Sur ses photos, les analystes découvrent des rampes de missiles soviétiques en construction.
+[1] 02:50-03:08 | Ces missiles peuvent atteindre une grande partie du territoire américain.
+[2] 00:45-00:53 | Le 18 octobre, Kennedy reçoit le ministre soviétique Andreï Gromyko. Il ne lui dit rien de ce qu'il sait.
+[2] 00:05-00:40 | Le 22 octobre, il parle à la télévision : il annonce une « quarantaine » autour de Cuba.
+[1] 00:45-01:04 | La marine américaine doit arrêter tout navire qui transporte des armes offensives.
+[1] 01:05-01:40 | À Cuba, Fidel Castro mobilise ses miliciens et fortifie les côtes.
+[1] 01:45-01:58 | Dans la rue, la foule répond : « Qu'ils viennent quand ils veulent ! »
+[1] 04:05-04:35 | Le 25 octobre, à l'ONU, l'ambassadeur américain Adlai Stevenson montre les photos au monde entier.
+SUITE: Partie 2 : Khrouchtchev répond.
+QUESTION: Toi, à la place de Kennedy, t'aurais bombardé les rampes ?`,
   // « 00:12 », « 1:05 », « 1:02:03 », « 75 », « 00:12.5 »
   time(s) {
     const p = s.trim().replace(',', '.').split(':').map(Number);

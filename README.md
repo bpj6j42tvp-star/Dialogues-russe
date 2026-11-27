@@ -61,6 +61,14 @@ Page séparée, accessible par le lien « Mode Archives » de l'accueil. Elle mo
 6. **Export** : même moteur que les dialogues (30 i/s constants, H.264 + AAC, contrôle automatique), plus l'audio seul (MP3) et les sous-titres (.srt).
 7. **Projets** : « Enregistrer le projet » garde le script, les réglages et la liste des vidéos à réimporter.
 
+### Tester avec de vraies archives (exemple pré-rempli)
+
+Le script d'exemple de la page Archives est calé sur deux actualités Universal Newsreel d'octobre 1962, marquées domaine public sur Internet Archive. Télécharge la version **MPEG4 / h.264** (640×480) de chacune, dans cet ordre :
+
+1. [1] « The Cuban Crisis », 25 octobre 1962 (6 min, 35 Mo) : https://archive.org/details/1962-10-25_The_Cuban_Crisis
+2. [2] « The Red Threat. President Orders Cuban Blockade », 22 octobre 1962 (3 min, 18 Mo) : https://archive.org/details/1962-10-22_The_Red_Threat
+
+
 Les sous-titres « mot par mot » sont minutés au prorata de la longueur des mots (ni Azure en REST ni l'enregistrement ne donnent le minutage exact de chaque mot).
 
 ## Choix techniques
